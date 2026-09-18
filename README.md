@@ -79,8 +79,3 @@ src/
 public/data/                 簡略化済み地図データ（world.json / prefectures.json）
 scripts/simplify_geodata.py   元データから軽量版を再生成するスクリプト
 ```
-
-### 未検証・要注意事項
-
-- 気象庁サーバーのCORS許可状況は未検証です。ブロックされる場合は簡易プロキシの追加が必要になる可能性があります
-- 震源データの `mj`・`aflag`・`flag` プロパティの意味は未確認のためUIには使用していません
