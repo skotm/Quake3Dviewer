@@ -103,6 +103,9 @@ export class QuakeMapEngine {
       // enough to straight-down to still read as a top-down map.
       minPitch: 12,
       maxPitch: 80,
+      // Our basemap is just simplified polygons (no street-level detail), so
+      // zooming in much further than this shows nothing new.
+      maxZoom: 10,
       antialias: true,
       // Keep the WebGL drawing buffer around between frames. Without this,
       // browsers may discard it right after compositing, which breaks
@@ -145,7 +148,7 @@ export class QuakeMapEngine {
       id: 'world-fill',
       type: 'fill',
       source: 'world',
-      paint: { 'fill-color': '#141b2b', 'fill-opacity': 0.5 },
+      paint: { 'fill-color': '#141b2b', 'fill-opacity': 0.93 },
     });
     this.map.addLayer({
       id: 'world-line',
@@ -159,7 +162,7 @@ export class QuakeMapEngine {
       id: 'pref-fill',
       type: 'fill',
       source: 'prefectures',
-      paint: { 'fill-color': '#1c2540', 'fill-opacity': 0.55 },
+      paint: { 'fill-color': '#1c2540', 'fill-opacity': 0.93 },
     });
     this.map.addLayer({
       id: 'pref-line',

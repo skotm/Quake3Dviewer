@@ -41,7 +41,7 @@ export default function ControlPanel({
             最小マグニチュード <span className="val">{minMag.toFixed(1)}</span>
           </div>
           <input
-            type="range" min="0" max="6" step="0.5"
+            type="range" min="-2" max="7.5" step="0.5"
             value={minMag}
             onChange={(e) => setMinMag(parseFloat(e.target.value))}
           />
@@ -52,7 +52,7 @@ export default function ControlPanel({
             深さ方向の強調 <span className="val">{exaggeration.toFixed(1)}×</span>
           </div>
           <input
-            type="range" min="0.5" max="4" step="0.5"
+            type="range" min="0.5" max="10" step="0.5"
             value={exaggeration}
             onChange={(e) => setExaggeration(parseFloat(e.target.value))}
           />
