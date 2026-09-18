@@ -11,7 +11,12 @@ import './App.css';
 export default function App() {
   const engineRef = useRef(null);
 
+  const [rangeMode, setRangeMode] = useState('recent'); // 'recent' | 'custom'
   const [days, setDays] = useState(7);
+  const todayStr = new Date().toISOString().slice(0, 10);
+  const weekAgoStr = new Date(Date.now() - 6 * 86400000).toISOString().slice(0, 10);
+  const [customStart, setCustomStart] = useState(weekAgoStr);
+  const [customEnd, setCustomEnd] = useState(todayStr);
   const [minMag, setMinMag] = useState(2.0);
   const [exaggeration, setExaggeration] = useState(1.5);
   const [showStems, setShowStems] = useState(true);
@@ -45,6 +50,9 @@ export default function App() {
     <div className="app-root">
       <MapView
         days={days}
+        rangeMode={rangeMode}
+        customStart={customStart}
+        customEnd={customEnd}
         minMag={minMag}
         exaggeration={exaggeration}
         showStems={showStems}
@@ -61,7 +69,10 @@ export default function App() {
       </div>
 
       <ControlPanel
+        rangeMode={rangeMode} setRangeMode={setRangeMode}
         days={days} setDays={setDays}
+        customStart={customStart} setCustomStart={setCustomStart}
+        customEnd={customEnd} setCustomEnd={setCustomEnd}
         minMag={minMag} setMinMag={setMinMag}
         exaggeration={exaggeration} setExaggeration={setExaggeration}
         showStems={showStems} setShowStems={setShowStems}

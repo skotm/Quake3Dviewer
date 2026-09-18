@@ -1,5 +1,7 @@
 import { idbGet, idbSet, STORE_QUAKE_DAYS } from './idb.js';
 
+const MAX_RANGE_DAYS = 366; // safety cap: one JMA request per day, don't let a fat-fingered range fire hundreds of requests unbounded
+
 function pad2(n) {
   return String(n).padStart(2, '0');
 }
@@ -50,6 +52,24 @@ export function lastNDateKeys(days) {
   return keys;
 }
 
+/**
+ * Returns every 'YYYY-MM-DD' key between startKey and endKey inclusive
+ * (order-independent — swaps them if given backwards). Clamped to
+ * MAX_RANGE_DAYS, keeping the most recent days if the range is longer.
+ */
+export function dateKeysInRange(startKey, endKey) {
+  let start = new Date(`${startKey}T00:00:00Z`);
+  let end = new Date(`${endKey}T00:00:00Z`);
+  if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) return [];
+  if (start > end) [start, end] = [end, start];
+
+  const keys = [];
+  for (let t = start.getTime(); t <= end.getTime(); t += 86400000) {
+    keys.push(new Date(t).toISOString().slice(0, 10));
+  }
+  return keys.length > MAX_RANGE_DAYS ? keys.slice(-MAX_RANGE_DAYS) : keys;
+}
+
 async function fetchDay(dateKey) {
   const url = urlForDateKey(dateKey);
   const res = await fetch(url);
@@ -61,16 +81,12 @@ async function fetchDay(dateKey) {
 const todayKey = () => jstDateKey(new Date());
 
 /**
- * Loads earthquake data for the last `days` days, using IndexedDB as a cache
- * for every day except today (today's file is still being appended to by JMA
- * over the course of the day, so it is always re-fetched).
- *
- * @param {number} days
- * @param {(done:number, total:number)=>void} [onProgress]
- * @param {number} [concurrency]
+ * Loads earthquake data for an explicit list of 'YYYY-MM-DD' keys, using
+ * IndexedDB as a cache for every day except today (today's file is still
+ * being appended to by JMA over the course of the day, so it's always
+ * re-fetched).
  */
-export async function loadRecentQuakes(days, onProgress, concurrency = 8) {
-  const keys = lastNDateKeys(days);
+async function loadQuakesForDateKeys(keys, onProgress, concurrency = 8) {
   const today = todayKey();
   const results = new Array(keys.length);
   let done = 0;
@@ -110,4 +126,14 @@ export async function loadRecentQuakes(days, onProgress, concurrency = 8) {
   const failedDays = keys.filter((k, i) => results[i] === null);
   const features = results.filter(Boolean).flat();
   return { features, failedDays, requestedDays: keys.length };
+}
+
+/** Loads earthquake data for the last `days` days (inclusive of today, JST). */
+export async function loadRecentQuakes(days, onProgress, concurrency = 8) {
+  return loadQuakesForDateKeys(lastNDateKeys(days), onProgress, concurrency);
+}
+
+/** Loads earthquake data for an explicit [startDate, endDate] range ('YYYY-MM-DD' strings, inclusive). */
+export async function loadQuakesForRange(startDate, endDate, onProgress, concurrency = 8) {
+  return loadQuakesForDateKeys(dateKeysInRange(startDate, endDate), onProgress, concurrency);
 }

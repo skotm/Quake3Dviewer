@@ -1,10 +1,21 @@
 import { useEffect, useRef } from 'react';
 import 'maplibre-gl/dist/maplibre-gl.css';
 import { QuakeMapEngine } from '../lib/QuakeMapEngine.js';
-import { loadRecentQuakes } from '../lib/jma.js';
+import { loadRecentQuakes, loadQuakesForRange } from '../lib/jma.js';
 import { buildSampleQuakes } from '../lib/sampleData.js';
 
-export default function MapView({ days, minMag, exaggeration, showStems, reloadToken, onStats, onHover, onStatus, engineRef }) {
+function buildLoader({ rangeMode, days, customStart, customEnd }) {
+  if (rangeMode === 'custom' && customStart && customEnd) {
+    return () => loadQuakesForRange(customStart, customEnd);
+  }
+  return () => loadRecentQuakes(days);
+}
+
+export default function MapView({
+  days, rangeMode, customStart, customEnd,
+  minMag, exaggeration, showStems, reloadToken,
+  onStats, onHover, onStatus, engineRef,
+}) {
   const containerRef = useRef(null);
   const localEngineRef = useRef(null);
 
@@ -16,7 +27,7 @@ export default function MapView({ days, minMag, exaggeration, showStems, reloadT
 
     engine.init().then(() => {
       if (engine.ready) {
-        engine.loadRange(days, loadRecentQuakes).catch(() => {});
+        engine.loadQuakes(buildLoader({ rangeMode, days, customStart, customEnd })).catch(() => {});
       }
     });
 
@@ -24,13 +35,15 @@ export default function MapView({ days, minMag, exaggeration, showStems, reloadT
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Reload when the requested date range changes (or an explicit refresh is requested).
+  // Reload when the requested period changes (or an explicit refresh is requested).
   useEffect(() => {
     const engine = localEngineRef.current;
     if (!engine || !engine.scene) return;
-    engine.loadRange(days, loadRecentQuakes).catch(() => {});
+    // In custom mode, wait until both dates are actually filled in.
+    if (rangeMode === 'custom' && (!customStart || !customEnd)) return;
+    engine.loadQuakes(buildLoader({ rangeMode, days, customStart, customEnd })).catch(() => {});
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [days, reloadToken]);
+  }, [days, rangeMode, customStart, customEnd, reloadToken]);
 
   useEffect(() => {
     localEngineRef.current?.setMinMag(minMag);

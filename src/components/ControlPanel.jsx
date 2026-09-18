@@ -10,7 +10,10 @@ const RANGE_OPTIONS = [
 ];
 
 export default function ControlPanel({
+  rangeMode, setRangeMode,
   days, setDays,
+  customStart, setCustomStart,
+  customEnd, setCustomEnd,
   minMag, setMinMag,
   exaggeration, setExaggeration,
   showStems, setShowStems,
@@ -24,17 +27,57 @@ export default function ControlPanel({
         <div className="ctrl-group">
           <div className="ctrl-label">期間</div>
           <div className="btn-row">
-            {RANGE_OPTIONS.map((opt) => (
-              <PressableButton
-                key={opt.days}
-                className={`btn ${days === opt.days ? 'active' : ''}`}
-                onClick={() => setDays(opt.days)}
-              >
-                {opt.label}
-              </PressableButton>
-            ))}
+            <PressableButton
+              className={`btn ${rangeMode === 'recent' ? 'active' : ''}`}
+              onClick={() => setRangeMode('recent')}
+            >
+              直近
+            </PressableButton>
+            <PressableButton
+              className={`btn ${rangeMode === 'custom' ? 'active' : ''}`}
+              onClick={() => setRangeMode('custom')}
+            >
+              期間指定
+            </PressableButton>
           </div>
         </div>
+
+        {rangeMode === 'recent' ? (
+          <div className="ctrl-group">
+            <div className="btn-row">
+              {RANGE_OPTIONS.map((opt) => (
+                <PressableButton
+                  key={opt.days}
+                  className={`btn ${days === opt.days ? 'active' : ''}`}
+                  onClick={() => setDays(opt.days)}
+                >
+                  {opt.label}
+                </PressableButton>
+              ))}
+            </div>
+          </div>
+        ) : (
+          <div className="ctrl-group date-range-group">
+            <label className="date-field">
+              <span>開始日</span>
+              <input
+                type="date"
+                value={customStart}
+                max={customEnd || undefined}
+                onChange={(e) => setCustomStart(e.target.value)}
+              />
+            </label>
+            <label className="date-field">
+              <span>終了日</span>
+              <input
+                type="date"
+                value={customEnd}
+                min={customStart || undefined}
+                onChange={(e) => setCustomEnd(e.target.value)}
+              />
+            </label>
+          </div>
+        )}
 
         <div className="ctrl-group">
           <div className="ctrl-label">

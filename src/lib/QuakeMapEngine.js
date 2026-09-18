@@ -275,10 +275,16 @@ export class QuakeMapEngine {
 
   // ---- Data loading ----
 
-  async loadRange(days, loaderFn) {
+  /**
+   * Runs the given zero-argument loader (e.g. () => loadRecentQuakes(7) or
+   * () => loadQuakesForRange(start, end)) and renders the result. Kept
+   * generic so callers decide *what* to load; the engine only cares about
+   * the resulting { features, failedDays, requestedDays } shape.
+   */
+  async loadQuakes(loaderFn) {
     this.callbacks.onStatus?.('loading', 'JMAから震源データを取得しています…');
     try {
-      const { features, failedDays, requestedDays } = await loaderFn(days);
+      const { features, failedDays, requestedDays } = await loaderFn();
       this.rawFeatures = features;
       this._rebuild();
       this.callbacks.onStatus?.('hidden');
