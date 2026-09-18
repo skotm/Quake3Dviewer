@@ -1,0 +1,421 @@
+.app-root {
+  position: fixed;
+  inset: 0;
+  color: #e9ecf2;
+}
+
+:root {
+  /* Liquid-glass rim light tokens, borrowed from the reference app's dark theme */
+  --rim-light: rgba(255, 255, 255, 0.4);
+  --rim-highlight: rgba(255, 255, 255, 0.5);
+}
+
+.panel {
+  position: absolute;
+  background: rgba(14, 19, 29, 0.78);
+  border-radius: 10px;
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  padding: 14px 16px;
+  box-shadow:
+    0 8px 30px rgba(0, 0, 0, 0.35),
+    inset 0 0 0 0.75px var(--rim-light),
+    inset 0 1px 0 var(--rim-highlight);
+  z-index: 10;
+}
+
+/* ---------- Title ---------- */
+.title-block {
+  top: 16px;
+  left: 16px;
+  max-width: 320px;
+}
+.title-block h1 {
+  font-size: 15px;
+  font-weight: 600;
+  margin: 0 0 2px 0;
+  letter-spacing: 0.01em;
+}
+.title-block p {
+  font-size: 11.5px;
+  color: #8a93a6;
+  margin: 0;
+  line-height: 1.5;
+}
+
+/* ---------- Controls ---------- */
+.toggle-controls {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  display: none;
+  width: 38px;
+  height: 38px;
+  border-radius: 10px;
+  background: rgba(14, 19, 29, 0.78);
+  color: #e9ecf2;
+  font-size: 16px;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  backdrop-filter: blur(14px);
+  box-shadow: inset 0 0 0 0.75px var(--rim-light), inset 0 1px 0 var(--rim-highlight);
+  z-index: 12;
+}
+
+.controls {
+  top: 16px;
+  right: 16px;
+  width: 236px;
+  max-height: calc(100vh - 32px);
+  overflow-y: auto;
+}
+.controls.collapsed {
+  display: none;
+}
+
+.ctrl-group {
+  margin-bottom: 14px;
+}
+.ctrl-group:last-child {
+  margin-bottom: 0;
+}
+.ctrl-label {
+  font-size: 11px;
+  color: #8a93a6;
+  margin-bottom: 6px;
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+}
+.ctrl-label .val {
+  font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  color: #e9ecf2;
+  font-size: 11px;
+}
+
+.checkbox-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 12px;
+  color: #c7ccd6;
+  cursor: pointer;
+}
+
+.btn-row {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+.btn {
+  flex: 1 1 auto;
+  background: rgba(255, 255, 255, 0.04);
+  border: none;
+  color: #8a93a6;
+  font-size: 11.5px;
+  padding: 6px 4px;
+  border-radius: 999px;
+  cursor: pointer;
+  text-align: center;
+  font-family: inherit;
+  box-shadow: inset 0 0 0 0.75px var(--rim-light), inset 0 1px 0 var(--rim-highlight);
+  min-width: 44px;
+}
+.btn:hover {
+  background: rgba(255, 255, 255, 0.08);
+  color: #e9ecf2;
+}
+.btn.active {
+  background: rgba(255, 107, 74, 0.16);
+  color: #ffb199;
+  box-shadow: inset 0 0 0 0.75px rgba(255, 107, 74, 0.55), inset 0 1px 0 rgba(255, 107, 74, 0.35);
+}
+.btn.primary {
+  background: rgba(76, 141, 255, 0.16);
+  color: #a9c6ff;
+  flex: none;
+  width: 100%;
+  border-radius: 12px;
+  box-shadow: inset 0 0 0 0.75px rgba(76, 141, 255, 0.55), inset 0 1px 0 rgba(76, 141, 255, 0.35);
+}
+.btn.primary:hover {
+  background: rgba(76, 141, 255, 0.26);
+}
+
+/* ---------- iOS-style toggle ---------- */
+.toggle-track {
+  width: 44px;
+  height: 26px;
+  border-radius: 13px;
+  flex-shrink: 0;
+  background: rgba(255, 255, 255, 0.16);
+  position: relative;
+  cursor: pointer;
+  transition: background 0.22s;
+  box-shadow: inset 0 0 0 0.5px rgba(0, 0, 0, 0.3);
+}
+.toggle-track.on {
+  background: #32d74b;
+}
+.toggle-track.disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+.toggle-knob {
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.35);
+  transition: left 0.22s cubic-bezier(0.25, 1, 0.5, 1);
+}
+.toggle-track.on .toggle-knob {
+  left: 21px;
+}
+
+input[type="range"] {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 100%;
+  height: 3px;
+  border-radius: 2px;
+  background: rgba(255, 255, 255, 0.14);
+  outline: none;
+}
+input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: #e9ecf2;
+  cursor: pointer;
+  border: 2px solid var(--bg-deep);
+}
+input[type="range"]::-moz-range-thumb {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: #e9ecf2;
+  cursor: pointer;
+  border: 2px solid var(--bg-deep);
+}
+
+/* ---------- Stats ---------- */
+.stats {
+  bottom: 16px;
+  left: 16px;
+  min-width: 190px;
+}
+.stats .row {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  font-size: 11.5px;
+  color: #8a93a6;
+  padding: 3px 0;
+}
+.stats .row b {
+  font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  color: #e9ecf2;
+  font-weight: 500;
+  font-size: 12px;
+}
+.stats .divider {
+  height: 1px;
+  background: rgba(255, 255, 255, 0.07);
+  margin: 6px 0;
+}
+.stats .latest-place {
+  font-size: 11px;
+  color: #e9ecf2;
+  margin-top: 2px;
+  line-height: 1.4;
+}
+
+/* ---------- Legend ---------- */
+.legend {
+  bottom: 16px;
+  right: 16px;
+  width: 200px;
+}
+.legend h3 {
+  font-size: 10.5px;
+  color: #8a93a6;
+  margin: 0 0 8px 0;
+  font-weight: 500;
+}
+.legend-block {
+  margin-bottom: 12px;
+}
+.legend-block:last-child {
+  margin-bottom: 0;
+}
+.depth-gradient {
+  height: 8px;
+  border-radius: 4px;
+  margin-bottom: 5px;
+  background: linear-gradient(to right, #ff6b4a, #ffb84d 50%, #4c8dff);
+}
+.depth-ticks {
+  display: flex;
+  justify-content: space-between;
+  font-size: 10px;
+  color: #5b6479;
+  font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+}
+.mag-legend {
+  display: flex;
+  align-items: flex-end;
+  gap: 14px;
+  padding-top: 2px;
+}
+.mag-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+.mag-dot {
+  border-radius: 50%;
+  background: #c7ccd6;
+}
+.mag-item span {
+  font-size: 10px;
+  color: #5b6479;
+  font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+}
+
+/* ---------- Tooltip ---------- */
+.tooltip {
+  position: absolute;
+  pointer-events: none;
+  background: rgba(10, 14, 22, 0.95);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 8px;
+  padding: 9px 11px;
+  font-size: 11.5px;
+  line-height: 1.6;
+  max-width: 220px;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.5);
+  z-index: 20;
+}
+.tooltip .t-place {
+  font-size: 12.5px;
+  font-weight: 600;
+  margin-bottom: 3px;
+}
+.tooltip .t-row {
+  color: #8a93a6;
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+}
+.tooltip .t-row b {
+  color: #e9ecf2;
+  font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  font-weight: 500;
+}
+
+/* ---------- Status overlay ---------- */
+.status-overlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
+  gap: 14px;
+  background: rgba(6, 10, 18, 0.7);
+  z-index: 30;
+}
+.spinner {
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  border: 2px solid rgba(255, 255, 255, 0.15);
+  border-top-color: #ff6b4a;
+  animation: spin 0.8s linear infinite;
+}
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+.status-text {
+  font-size: 12.5px;
+  color: #8a93a6;
+  text-align: center;
+  max-width: 280px;
+  line-height: 1.6;
+  padding: 0 20px;
+}
+.status-actions {
+  display: flex;
+  gap: 8px;
+}
+.status-actions .btn {
+  flex: none;
+  padding: 7px 14px;
+}
+
+.warning-toast {
+  position: absolute;
+  bottom: 90px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(255, 184, 77, 0.14);
+  border: 1px solid rgba(255, 184, 77, 0.4);
+  color: #ffd9a0;
+  font-size: 11.5px;
+  padding: 8px 14px;
+  border-radius: 8px;
+  z-index: 25;
+  max-width: min(90vw, 480px);
+  text-align: center;
+}
+
+/* ---------- Footer ---------- */
+.footer-note {
+  position: absolute;
+  bottom: 16px;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 10px;
+  color: #5b6479;
+  text-align: center;
+  white-space: nowrap;
+  z-index: 5;
+}
+
+/* ---------- Mobile ---------- */
+@media (max-width: 720px) {
+  .title-block {
+    max-width: calc(100vw - 90px);
+    padding: 10px 12px;
+  }
+  .title-block p {
+    display: none;
+  }
+  .controls {
+    top: 64px;
+    right: 12px;
+    left: 12px;
+    width: auto;
+  }
+  .toggle-controls {
+    display: flex;
+  }
+  .stats {
+    left: 12px;
+    bottom: 12px;
+  }
+  .legend {
+    display: none;
+  }
+  .footer-note {
+    display: none;
+  }
+}
