@@ -251,14 +251,18 @@ input[type="range"]::-moz-range-thumb {
   position: static;
 }
 
-.icon-dock {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 4px;
-  width: 52px;
-  padding: 8px 0;
-  border-radius: 999px;
+.bottom-right-dock {
+  position: absolute;
+  bottom: 16px;
+  right: 16px;
+  z-index: 15;
+}
+
+/* One glass shape that morphs from a small circle into a rounded panel,
+   instead of a separate button + separate popup panel — matches the
+   reference app's WeatherMenuFloating technique. */
+.floating-menu {
+  overflow: hidden;
   background: var(--glass-bg);
   backdrop-filter: blur(var(--glass-blur)) saturate(140%);
   -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(140%);
@@ -266,86 +270,56 @@ input[type="range"]::-moz-range-thumb {
     0 10px 34px rgba(0, 0, 0, 0.4),
     inset 0 0 0 0.75px var(--rim-light),
     inset 0 1px 0 var(--rim-highlight);
+  transition:
+    width 0.3s cubic-bezier(0.22, 1, 0.36, 1),
+    height 0.3s cubic-bezier(0.22, 1, 0.36, 1),
+    border-radius 0.3s cubic-bezier(0.22, 1, 0.36, 1);
 }
-.icon-dock-btn {
-  width: 40px;
-  height: 40px;
-  border-radius: 50%;
+.floating-menu-stack {
+  display: flex;
+  flex-direction: column-reverse; /* toggle stays pinned bottom, items grow upward above it */
+  width: 100%;
+  height: 100%;
+}
+.floating-menu-toggle-row {
+  flex-shrink: 0;
+  width: 100%;
+  height: 44px;
   display: flex;
   align-items: center;
   justify-content: center;
 }
-.icon-dock-btn:hover {
-  background: rgba(255, 255, 255, 0.08);
+.floating-menu-toggle {
+  width: 44px;
+  height: 44px;
+  border-radius: 999px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #ffffff;
+  transition: transform 0.18s cubic-bezier(0.22, 1, 0.36, 1);
 }
-.icon-dock-btn.active {
-  background: rgba(100, 210, 255, 0.16);
+.floating-menu-toggle svg {
+  transition: transform 0.2s cubic-bezier(0.22, 1, 0.36, 1);
 }
-.icon-dock-btn.active .icon-dock-dot {
-  background: #64d2ff;
-}
-.icon-dock-dot {
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  background: var(--text-tertiary);
-}
-
-.bottom-right-dock {
-  position: absolute;
-  bottom: 16px;
-  right: 16px;
+.floating-menu-items {
+  flex: 1 1 auto;
   display: flex;
   flex-direction: column;
-  align-items: flex-end;
-  gap: 12px;
-  z-index: 15;
+  gap: 6px;
+  padding: 8px;
 }
-.bottom-right-dock .panel {
-  position: static;
+.floating-menu-item {
+  flex-shrink: 0;
+  height: 34px;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.05);
+  color: #ffffff;
+  font-size: 12.5px;
+  box-shadow: inset 0 0 0 0.75px var(--rim-light);
 }
-
-/* Grows out of the dock (see IconDock/DockPanel) instead of just
-   appearing — scales up from the bottom-right corner, where the dock sits. */
-.dock-panel {
-  width: 220px;
-  max-width: calc(100vw - 32px);
-  min-height: 110px;
-  padding: 14px 16px;
-  transform-origin: bottom right;
-  transform: scale(0.15);
-  opacity: 0;
-  pointer-events: none;
-  transition: transform 0.32s cubic-bezier(0.34, 1.56, 0.64, 1), opacity 0.22s ease;
-}
-.dock-panel.open {
-  transform: scale(1);
-  opacity: 1;
-  pointer-events: auto;
-}
-.dock-panel-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  font-size: 13px;
-  font-weight: 600;
-  margin-bottom: 8px;
-}
-.dock-panel-close {
-  width: 22px;
-  height: 22px;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: rgba(255, 255, 255, 0.08);
-  font-size: 11px;
-  color: var(--text-secondary);
-}
-.dock-panel-body {
-  font-size: 12px;
-  color: var(--text-secondary);
-  line-height: 1.6;
+.floating-menu-item:hover {
+  background: rgba(255, 255, 255, 0.1);
 }
 
 .stats {
