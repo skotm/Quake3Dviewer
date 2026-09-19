@@ -3,8 +3,7 @@ import MapView from './components/MapView.jsx';
 import ControlPanel from './components/ControlPanel.jsx';
 import StatsPanel from './components/StatsPanel.jsx';
 import Legend from './components/Legend.jsx';
-import IconDock from './components/IconDock.jsx';
-import DockPanel from './components/DockPanel.jsx';
+import FloatingMenu from './components/FloatingMenu.jsx';
 import Tooltip from './components/Tooltip.jsx';
 import StatusOverlay from './components/StatusOverlay.jsx';
 import { buildSampleQuakes } from './lib/sampleData.js';
@@ -30,7 +29,6 @@ export default function App() {
   const [stats, setStats] = useState({ count: null, maxMag: null, latest: null });
   const [hover, setHover] = useState({ record: null, pos: { x: 0, y: 0 } });
   const [status, setStatus] = useState({ mode: 'loading', message: '読み込み中…' });
-  const [activeDockSlot, setActiveDockSlot] = useState(null);
 
   const handleStats = useCallback((s) => setStats(s), []);
   const handleHover = useCallback((record, pos) => {
@@ -48,7 +46,6 @@ export default function App() {
   const handleRetry = () => setReloadToken((t) => t + 1);
   const handleUseSample = () => engineRef.current?.useSampleData(buildSampleQuakes());
   const handleRefresh = () => setReloadToken((t) => t + 1);
-  const handleToggleDockSlot = (i) => setActiveDockSlot((cur) => (cur === i ? null : i));
 
   return (
     <div className="app-root">
@@ -89,8 +86,7 @@ export default function App() {
         <StatsPanel stats={stats} />
       </div>
       <div className="bottom-right-dock">
-        <DockPanel activeSlot={activeDockSlot} onClose={() => setActiveDockSlot(null)} />
-        <IconDock activeSlot={activeDockSlot} onToggleSlot={handleToggleDockSlot} />
+        <FloatingMenu />
       </div>
       <Tooltip record={hover.record} pos={hover.pos} />
       <StatusOverlay status={status} onRetry={handleRetry} onUseSample={handleUseSample} />
