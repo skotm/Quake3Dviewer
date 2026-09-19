@@ -3,6 +3,7 @@ import MapView from './components/MapView.jsx';
 import ControlPanel from './components/ControlPanel.jsx';
 import StatsPanel from './components/StatsPanel.jsx';
 import Legend from './components/Legend.jsx';
+import IconDock from './components/IconDock.jsx';
 import Tooltip from './components/Tooltip.jsx';
 import StatusOverlay from './components/StatusOverlay.jsx';
 import { buildSampleQuakes } from './lib/sampleData.js';
@@ -81,7 +82,10 @@ export default function App() {
         onToggleCollapsed={() => setControlsCollapsed((c) => !c)}
       />
 
-      <StatsPanel stats={stats} />
+      <div className="bottom-left-cluster">
+        <IconDock />
+        <StatsPanel stats={stats} />
+      </div>
       <Tooltip record={hover.record} pos={hover.pos} />
       <StatusOverlay status={status} onRetry={handleRetry} onUseSample={handleUseSample} />
 
