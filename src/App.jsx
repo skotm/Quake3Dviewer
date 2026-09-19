@@ -3,7 +3,7 @@ import MapView from './components/MapView.jsx';
 import ControlPanel from './components/ControlPanel.jsx';
 import StatsPanel from './components/StatsPanel.jsx';
 import Legend from './components/Legend.jsx';
-import FloatingMenu from './components/FloatingMenu.jsx';
+import IconDock from './components/IconDock.jsx';
 import Tooltip from './components/Tooltip.jsx';
 import StatusOverlay from './components/StatusOverlay.jsx';
 import { buildSampleQuakes } from './lib/sampleData.js';
@@ -86,7 +86,7 @@ export default function App() {
         <StatsPanel stats={stats} />
       </div>
       <div className="bottom-right-dock">
-        <FloatingMenu />
+        <IconDock />
       </div>
       <Tooltip record={hover.record} pos={hover.pos} />
       <StatusOverlay status={status} onRetry={handleRetry} onUseSample={handleUseSample} />
