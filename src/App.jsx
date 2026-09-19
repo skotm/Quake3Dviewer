@@ -65,7 +65,7 @@ export default function App() {
 
       <div className="panel title-block">
         <h1>震源分布 3Dビューア</h1>
-        <p>日本周辺の地震を震央・深さ・規模で立体表示。ドラッグで回転、スクロールで拡大縮小。</p>
+        <Legend />
       </div>
 
       <ControlPanel
@@ -82,7 +82,6 @@ export default function App() {
       />
 
       <StatsPanel stats={stats} />
-      <Legend />
       <Tooltip record={hover.record} pos={hover.pos} />
       <StatusOverlay status={status} onRetry={handleRetry} onUseSample={handleUseSample} />
 
