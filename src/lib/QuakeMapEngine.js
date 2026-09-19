@@ -41,7 +41,7 @@ function worldGeometryCollectionToFeatureCollection(world) {
 const EMPTY_STYLE = {
   version: 8,
   sources: {},
-  layers: [{ id: 'bg', type: 'background', paint: { 'background-color': '#060a12' } }],
+  layers: [{ id: 'bg', type: 'background', paint: { 'background-color': '#121214' } }],
 };
 
 // Custom point-sprite shader: draws each earthquake as a soft-edged circular
@@ -148,13 +148,13 @@ export class QuakeMapEngine {
       id: 'world-fill',
       type: 'fill',
       source: 'world',
-      paint: { 'fill-color': '#141b2b', 'fill-opacity': 0.93 },
+      paint: { 'fill-color': '#2a2a2d', 'fill-opacity': 0.93 },
     });
     this.map.addLayer({
       id: 'world-line',
       type: 'line',
       source: 'world',
-      paint: { 'line-color': '#5a6c99', 'line-width': 0.9, 'line-opacity': 0.8 },
+      paint: { 'line-color': 'rgba(255,255,255,0.12)', 'line-width': 0.9, 'line-opacity': 0.8 },
     });
 
     this.map.addSource('prefectures', { type: 'geojson', data: prefectures });
@@ -162,13 +162,13 @@ export class QuakeMapEngine {
       id: 'pref-fill',
       type: 'fill',
       source: 'prefectures',
-      paint: { 'fill-color': '#1c2540', 'fill-opacity': 0.93 },
+      paint: { 'fill-color': '#35363b', 'fill-opacity': 0.93 },
     });
     this.map.addLayer({
       id: 'pref-line',
       type: 'line',
       source: 'prefectures',
-      paint: { 'line-color': '#8494c9', 'line-width': 1.1, 'line-opacity': 0.85 },
+      paint: { 'line-color': 'rgba(255,255,255,0.26)', 'line-width': 1.1, 'line-opacity': 0.85 },
     });
   }
 
