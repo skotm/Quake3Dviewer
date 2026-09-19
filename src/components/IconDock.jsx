@@ -9,7 +9,7 @@ const ITEMS = [
   { id: 2, label: 'メニュー3' },
 ];
 
-const CONTENT_HEIGHT = 120; // px the pill grows by when a slot is open
+const CONTENT_WIDTH = 180; // px the pill grows by (to the left) when a slot is open
 
 export default function IconDock() {
   const [active, setActive] = useState(null);
@@ -17,6 +17,14 @@ export default function IconDock() {
 
   return (
     <div className="icon-dock">
+      <div className="icon-dock-content" style={{ width: active != null ? CONTENT_WIDTH : 0 }}>
+        {active != null && (
+          <div className="icon-dock-content-inner">
+            <div className="icon-dock-content-title">{ITEMS[active].label}</div>
+            <div className="icon-dock-content-body">まだ中身は未設定です。</div>
+          </div>
+        )}
+      </div>
       <div className="icon-dock-buttons">
         {ITEMS.map((item, i) => (
           <PressableButton
@@ -28,14 +36,6 @@ export default function IconDock() {
             <span className="icon-dock-dot" />
           </PressableButton>
         ))}
-      </div>
-      <div className="icon-dock-content" style={{ height: active != null ? CONTENT_HEIGHT : 0 }}>
-        {active != null && (
-          <div className="icon-dock-content-inner">
-            <div className="icon-dock-content-title">{ITEMS[active].label}</div>
-            <div className="icon-dock-content-body">まだ中身は未設定です。</div>
-          </div>
-        )}
       </div>
     </div>
   );
