@@ -258,10 +258,13 @@ input[type="range"]::-moz-range-thumb {
   z-index: 15;
 }
 
-/* One glass shape that morphs from a small circle into a rounded panel,
-   instead of a separate button + separate popup panel — matches the
-   reference app's WeatherMenuFloating technique. */
-.floating-menu {
+/* Idle look stays the same tall pill with 3 icon slots. Opening a slot
+   grows the pill's own height to reveal content below the icons — one
+   glass shape resizing itself, same principle as the reference app, just
+   growing vertically instead of morphing into a wide panel. */
+.icon-dock {
+  width: 52px;
+  border-radius: 999px;
   overflow: hidden;
   background: var(--glass-bg);
   backdrop-filter: blur(var(--glass-blur)) saturate(140%);
@@ -270,56 +273,63 @@ input[type="range"]::-moz-range-thumb {
     0 10px 34px rgba(0, 0, 0, 0.4),
     inset 0 0 0 0.75px var(--rim-light),
     inset 0 1px 0 var(--rim-highlight);
-  transition:
-    width 0.3s cubic-bezier(0.22, 1, 0.36, 1),
-    height 0.3s cubic-bezier(0.22, 1, 0.36, 1),
-    border-radius 0.3s cubic-bezier(0.22, 1, 0.36, 1);
-}
-.floating-menu-stack {
-  display: flex;
-  flex-direction: column-reverse; /* toggle stays pinned bottom, items grow upward above it */
-  width: 100%;
-  height: 100%;
-}
-.floating-menu-toggle-row {
-  flex-shrink: 0;
-  width: 100%;
-  height: 44px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-.floating-menu-toggle {
-  width: 44px;
-  height: 44px;
-  border-radius: 999px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: #ffffff;
-  transition: transform 0.18s cubic-bezier(0.22, 1, 0.36, 1);
-}
-.floating-menu-toggle svg {
-  transition: transform 0.2s cubic-bezier(0.22, 1, 0.36, 1);
-}
-.floating-menu-items {
-  flex: 1 1 auto;
   display: flex;
   flex-direction: column;
-  gap: 6px;
-  padding: 8px;
 }
-.floating-menu-item {
+.icon-dock-buttons {
   flex-shrink: 0;
-  height: 34px;
-  border-radius: 8px;
-  background: rgba(255, 255, 255, 0.05);
-  color: #ffffff;
-  font-size: 12.5px;
-  box-shadow: inset 0 0 0 0.75px var(--rim-light);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 8px 0;
 }
-.floating-menu-item:hover {
-  background: rgba(255, 255, 255, 0.1);
+.icon-dock-btn {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.icon-dock-btn:hover {
+  background: rgba(255, 255, 255, 0.08);
+}
+.icon-dock-btn.active {
+  background: rgba(100, 210, 255, 0.16);
+}
+.icon-dock-btn.active .icon-dock-dot {
+  background: #64d2ff;
+}
+.icon-dock-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--text-tertiary);
+}
+.icon-dock-content {
+  width: 100%;
+  height: 0;
+  overflow: hidden;
+  transition: height 0.3s cubic-bezier(0.22, 1, 0.36, 1);
+}
+.icon-dock-content-inner {
+  padding: 0 10px 12px;
+  width: 100%;
+  box-sizing: border-box;
+}
+.icon-dock-content-title {
+  font-size: 11px;
+  font-weight: 600;
+  color: #ffffff;
+  margin-bottom: 4px;
+  text-align: center;
+}
+.icon-dock-content-body {
+  font-size: 10.5px;
+  color: var(--text-secondary);
+  line-height: 1.5;
+  text-align: center;
 }
 
 .stats {
