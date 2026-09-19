@@ -259,12 +259,11 @@ input[type="range"]::-moz-range-thumb {
 }
 
 /* Idle look stays the same tall pill with 3 icon slots. Opening a slot
-   grows the pill's own height to reveal content below the icons — one
-   glass shape resizing itself, same principle as the reference app, just
-   growing vertically instead of morphing into a wide panel. */
+   grows the pill's own width to the left (the right edge stays pinned via
+   .bottom-right-dock's `right` offset) to reveal content beside the icons —
+   one glass shape resizing itself, same principle as the reference app. */
 .icon-dock {
-  width: 52px;
-  border-radius: 999px;
+  border-radius: 26px;
   overflow: hidden;
   background: var(--glass-bg);
   backdrop-filter: blur(var(--glass-blur)) saturate(140%);
@@ -274,15 +273,17 @@ input[type="range"]::-moz-range-thumb {
     inset 0 0 0 0.75px var(--rim-light),
     inset 0 1px 0 var(--rim-highlight);
   display: flex;
-  flex-direction: column;
+  flex-direction: row;
+  align-items: stretch;
 }
 .icon-dock-buttons {
   flex-shrink: 0;
   display: flex;
   flex-direction: column;
   align-items: center;
+  justify-content: center;
   gap: 4px;
-  padding: 8px 0;
+  padding: 8px 6px;
 }
 .icon-dock-btn {
   width: 40px;
@@ -308,28 +309,26 @@ input[type="range"]::-moz-range-thumb {
   background: var(--text-tertiary);
 }
 .icon-dock-content {
-  width: 100%;
-  height: 0;
+  width: 0;
   overflow: hidden;
-  transition: height 0.3s cubic-bezier(0.22, 1, 0.36, 1);
+  transition: width 0.3s cubic-bezier(0.22, 1, 0.36, 1);
+  display: flex;
+  align-items: center;
 }
 .icon-dock-content-inner {
-  padding: 0 10px 12px;
-  width: 100%;
-  box-sizing: border-box;
+  padding: 10px 12px;
+  white-space: normal;
 }
 .icon-dock-content-title {
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 600;
   color: #ffffff;
   margin-bottom: 4px;
-  text-align: center;
 }
 .icon-dock-content-body {
-  font-size: 10.5px;
+  font-size: 11px;
   color: var(--text-secondary);
   line-height: 1.5;
-  text-align: center;
 }
 
 .stats {
