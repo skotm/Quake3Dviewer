@@ -106,6 +106,10 @@ export class QuakeMapEngine {
       // Our basemap is just simplified polygons (no street-level detail), so
       // zooming in much further than this shows nothing new.
       maxZoom: 10,
+      // Compact the built-in attribution control (the small "i" button) so
+      // it takes up as little space as possible in the corner it shares
+      // with our own legend panel.
+      attributionControl: { compact: true },
       antialias: true,
       // Keep the WebGL drawing buffer around between frames. Without this,
       // browsers may discard it right after compositing, which breaks
