@@ -267,23 +267,15 @@ input[type="range"]::-moz-range-thumb {
   line-height: 1.4;
 }
 
-/* ---------- Legend ---------- */
-.legend {
-  bottom: 16px;
-  right: 16px;
-  width: 200px;
+/* ---------- Legend (embedded inside the title panel) ---------- */
+.legend-inline {
+  margin-top: 10px;
 }
-.legend h3 {
+.legend-block h3 {
   font-size: 10.5px;
   color: var(--text-secondary);
   margin: 0 0 8px 0;
   font-weight: 500;
-}
-.legend-block {
-  margin-bottom: 12px;
-}
-.legend-block:last-child {
-  margin-bottom: 0;
 }
 .depth-gradient {
   height: 8px;
@@ -294,27 +286,6 @@ input[type="range"]::-moz-range-thumb {
 .depth-ticks {
   display: flex;
   justify-content: space-between;
-  font-size: 10px;
-  color: var(--text-tertiary);
-  font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
-}
-.mag-legend {
-  display: flex;
-  align-items: flex-end;
-  gap: 14px;
-  padding-top: 2px;
-}
-.mag-item {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 4px;
-}
-.mag-dot {
-  border-radius: 50%;
-  background: rgba(255, 255, 255, 0.75);
-}
-.mag-item span {
   font-size: 10px;
   color: var(--text-tertiary);
   font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
@@ -413,8 +384,7 @@ input[type="range"]::-moz-range-thumb {
   text-align: center;
 }
 
-/* ---------- Footer ---------- */
-.footer-note {
+/* ---------- Footer ---------- */.footer-note {
   position: absolute;
   bottom: 16px;
   left: 50%;
@@ -432,9 +402,6 @@ input[type="range"]::-moz-range-thumb {
     max-width: calc(100vw - 90px);
     padding: 10px 14px;
   }
-  .title-block p {
-    display: none;
-  }
   .controls {
     top: 64px;
     right: 12px;
@@ -447,9 +414,6 @@ input[type="range"]::-moz-range-thumb {
   .stats {
     left: 12px;
     bottom: 12px;
-  }
-  .legend {
-    display: none;
   }
   .footer-note {
     display: none;
