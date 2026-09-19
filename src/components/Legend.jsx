@@ -1,6 +1,6 @@
 export default function Legend() {
   return (
-    <div className="panel legend">
+    <div className="legend-inline">
       <div className="legend-block">
         <h3>深さ</h3>
         <div className="depth-gradient" />
@@ -9,3 +9,4 @@ export default function Legend() {
     </div>
   );
 }
+
