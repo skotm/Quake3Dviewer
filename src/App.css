@@ -263,6 +263,7 @@ input[type="range"]::-moz-range-thumb {
    .bottom-right-dock's `right` offset) to reveal content beside the icons —
    one glass shape resizing itself, same principle as the reference app. */
 .icon-dock {
+  height: 144px;
   border-radius: 26px;
   overflow: hidden;
   background: var(--glass-bg);
@@ -317,18 +318,20 @@ input[type="range"]::-moz-range-thumb {
 }
 .icon-dock-content-inner {
   padding: 10px 12px;
-  white-space: normal;
+  white-space: nowrap;
 }
 .icon-dock-content-title {
   font-size: 12px;
   font-weight: 600;
   color: #ffffff;
   margin-bottom: 4px;
+  white-space: nowrap;
 }
 .icon-dock-content-body {
   font-size: 11px;
   color: var(--text-secondary);
   line-height: 1.5;
+  white-space: nowrap;
 }
 
 .stats {
