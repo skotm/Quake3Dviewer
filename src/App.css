@@ -258,12 +258,16 @@ input[type="range"]::-moz-range-thumb {
   z-index: 15;
 }
 
-/* Idle look stays the same tall pill with 3 icon slots. Opening a slot
-   grows the pill's own width to the left (the right edge stays pinned via
-   .bottom-right-dock's `right` offset) to reveal content beside the icons —
-   one glass shape resizing itself, same principle as the reference app. */
+/* Idle look is a tall pill with 3 icon slots stacked vertically. Opening a
+   slot resizes the whole shape (width + height animate together) into a
+   short, wide card, and the icon buttons themselves slide from their
+   stacked-column spot up into a row along the new top edge — the buttons
+   relocate into the shape rather than the shape growing a separate area
+   beside a static button column. Anchored via .bottom-right-dock's
+   bottom/right offsets, so all of this growth happens up and to the left,
+   which is what keeps the bottom-right corner visually still. */
 .icon-dock {
-  height: 144px;
+  position: relative;
   border-radius: 26px;
   overflow: hidden;
   background: var(--glass-bg);
@@ -273,22 +277,29 @@ input[type="range"]::-moz-range-thumb {
     0 10px 34px rgba(0, 0, 0, 0.4),
     inset 0 0 0 0.75px var(--rim-light),
     inset 0 1px 0 var(--rim-highlight);
-  display: flex;
-  flex-direction: row;
-  align-items: stretch;
+  transition:
+    width 0.35s cubic-bezier(0.22, 1, 0.36, 1),
+    height 0.35s cubic-bezier(0.22, 1, 0.36, 1),
+    border-radius 0.35s cubic-bezier(0.22, 1, 0.36, 1);
 }
-.icon-dock-buttons {
-  flex-shrink: 0;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 4px;
-  padding: 8px 6px;
+.icon-dock.open {
+  border-radius: 22px;
 }
-.icon-dock-btn {
+
+/* Each button's actual position lives on this wrapper (inline `transform`,
+   set from IconDock.jsx), so the slide and PressableButton's own
+   press-feedback scale never have to share one `transform`. */
+.icon-dock-slot {
+  position: absolute;
+  top: 0;
+  left: 0;
   width: 40px;
   height: 40px;
+  transition: transform 0.35s cubic-bezier(0.22, 1, 0.36, 1);
+}
+.icon-dock-btn {
+  width: 100%;
+  height: 100%;
   border-radius: 50%;
   display: flex;
   align-items: center;
@@ -309,29 +320,317 @@ input[type="range"]::-moz-range-thumb {
   border-radius: 50%;
   background: var(--text-tertiary);
 }
+
+/* Sits below the top button row at all times; idle state just keeps it
+   invisible and non-interactive rather than unmounting it, so it has
+   something to fade into once the row has slid into place. */
 .icon-dock-content {
-  width: 0;
+  position: absolute;
+  top: 56px;
+  left: 8px;
+  right: 8px;
+  bottom: 8px;
   overflow: hidden;
-  transition: width 0.3s cubic-bezier(0.22, 1, 0.36, 1);
-  display: flex;
-  align-items: center;
+  transition: opacity 0.25s ease;
 }
-.icon-dock-content-inner {
-  padding: 10px 12px;
-  white-space: nowrap;
+.icon-dock.open .icon-dock-content {
+  transition-delay: 0.12s;
 }
 .icon-dock-content-title {
   font-size: 12px;
   font-weight: 600;
   color: #ffffff;
   margin-bottom: 4px;
-  white-space: nowrap;
 }
 .icon-dock-content-body {
   font-size: 11px;
   color: var(--text-secondary);
   line-height: 1.5;
+}
+
+/* ---------- Earthquake browser (IconDock slot 0) ---------- */
+.quake-panel {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+.quake-panel-header {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 2px 2px 8px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+.quake-back-btn {
+  width: 22px;
+  height: 22px;
+  flex-shrink: 0;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.08);
+  color: #ffffff;
+  font-size: 16px;
+  line-height: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.quake-panel-title {
+  flex: 1;
+  font-size: 12px;
+  font-weight: 700;
+  color: #ffffff;
+}
+.quake-ws-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.25);
+  flex-shrink: 0;
+}
+.quake-ws-dot.live {
+  background: #32d74b;
+  box-shadow: 0 0 4px rgba(50, 215, 75, 0.7);
+}
+.quake-scheme-picker {
+  display: flex;
+  gap: 5px;
+  flex-shrink: 0;
+}
+.quake-scheme-dot {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  box-shadow: inset 0 0 0 1.5px rgba(255, 255, 255, 0.25);
+}
+.quake-scheme-dot.active {
+  box-shadow: inset 0 0 0 2px #ffffff;
+}
+
+.quake-panel-scroll {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  margin: 0 -2px;
+}
+
+.quake-status-text {
+  padding: 16px 6px;
+  font-size: 11.5px;
+  color: var(--text-secondary);
+  text-align: center;
+  line-height: 1.6;
+}
+.quake-retry-btn {
+  display: block;
+  margin: 8px auto 0;
+  padding: 5px 14px;
+  border-radius: 999px;
+  background: rgba(100, 210, 255, 0.16);
+  color: #64d2ff;
+  font-size: 11px;
+}
+
+.quake-row-divider {
+  height: 0.5px;
+  background: rgba(255, 255, 255, 0.08);
+  margin-left: 8px;
+}
+.quake-row {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 4px;
+  text-align: left;
+}
+.quake-row-badge {
+  flex-shrink: 0;
+  width: 26px;
+  height: 20px;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 800;
+  line-height: 1.1;
+  text-align: center;
+}
+.quake-row-main {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+.quake-row-stage {
+  flex-shrink: 0;
+  font-size: 8.5px;
+  font-weight: 700;
+  padding: 1px 5px;
+  border-radius: 5px;
+  background: rgba(255, 255, 255, 0.1);
+  color: rgba(255, 255, 255, 0.65);
   white-space: nowrap;
+}
+.quake-row-place {
+  min-width: 0;
+  font-size: 12px;
+  font-weight: 600;
+  color: #ffffff;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.quake-row-time {
+  flex-shrink: 0;
+  font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  font-size: 9.5px;
+  color: var(--text-tertiary);
+}
+
+/* ---------- Earthquake detail card ---------- */
+.quake-detail {
+  padding: 4px 2px 2px;
+}
+.quake-detail-top {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.quake-detail-badge-col {
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+}
+.quake-detail-badge-label {
+  font-size: 9.5px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  white-space: nowrap;
+}
+.quake-detail-badge {
+  width: 52px;
+  height: 52px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.quake-detail-badge-text {
+  font-size: 11px;
+  font-weight: 800;
+  text-align: center;
+}
+.quake-detail-badge-num {
+  font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  font-size: 26px;
+  font-weight: 800;
+  line-height: 1;
+}
+.quake-detail-badge-suffix {
+  font-size: 12px;
+  font-weight: 700;
+  margin-left: 1px;
+  align-self: flex-end;
+  margin-bottom: 10px;
+}
+.quake-detail-badge-5u {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  line-height: 1.1;
+}
+.quake-detail-badge-5u .quake-detail-badge-num {
+  font-size: 17px;
+}
+.quake-detail-badge-sub {
+  font-size: 8.5px;
+  font-weight: 700;
+  margin-top: 1px;
+}
+
+.quake-detail-info {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+.quake-detail-place-row {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  min-width: 0;
+}
+.quake-detail-stage {
+  flex-shrink: 0;
+  font-size: 9px;
+  font-weight: 700;
+  padding: 2px 7px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.14);
+  color: rgba(255, 255, 255, 0.75);
+  white-space: nowrap;
+}
+.quake-detail-label {
+  font-size: 10.5px;
+  color: var(--text-secondary);
+  flex-shrink: 0;
+}
+.quake-detail-place {
+  min-width: 0;
+  font-size: 15px;
+  font-weight: 800;
+  color: #ffffff;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.quake-detail-row {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+}
+.quake-detail-val {
+  font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  font-size: 14px;
+  font-weight: 800;
+  color: #ffffff;
+  margin-left: 3px;
+}
+.quake-detail-time {
+  font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  font-size: 11px;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.85);
+}
+
+.quake-message {
+  margin-top: 10px;
+  padding: 9px 10px;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.04);
+  box-shadow: inset 0 0 0 0.5px rgba(255, 255, 255, 0.08);
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.quake-message-line {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+.quake-message-label {
+  font-size: 9.5px;
+  color: var(--text-tertiary);
+}
+.quake-message-text {
+  font-size: 11px;
+  color: rgba(255, 255, 255, 0.85);
+  line-height: 1.5;
 }
 
 .stats {

@@ -86,7 +86,7 @@ export default function App() {
         <StatsPanel stats={stats} />
       </div>
       <div className="bottom-right-dock">
-        <IconDock />
+        <IconDock engineRef={engineRef} />
       </div>
       <Tooltip record={hover.record} pos={hover.pos} />
       <StatusOverlay status={status} onRetry={handleRetry} onUseSample={handleUseSample} />

@@ -2,6 +2,11 @@ import maplibregl from 'maplibre-gl';
 import * as THREE from 'three';
 import { idbGet, idbSet, STORE_MAP_DATA } from './idb.js';
 import { depthToRgb01, pixelSizeForMag } from './color.js';
+import { loadQuakeRegions } from './quakeAreas.js';
+import { registerStationIcons, STATION_ICON_BASE_RADIUS } from './quakeStationIcons.js';
+import { QUAKE_COLOR_SCHEMES, INTENSITY_ORDER } from './quakeFeed.js';
+
+const EMPTY_FEATURE_COLLECTION = { type: 'FeatureCollection', features: [] };
 
 const MAP_DATA_VERSION = 'v1'; // bump if public/data files change shape
 
@@ -82,6 +87,14 @@ export class QuakeMapEngine {
     this.pointsMesh = null;
     this.stemsMesh = null;
     this._currentRecords = []; // parallel to pointsMesh vertices, for rayc[index] -> record
+    this._selectedQuakeRecord = null; // { lat, lon, depth, mag } | null — the browsed quake's own hypocenter
+    this.selectedHaloMesh = null;
+    this.selectedCoreMesh = null;
+    this.selectedStemMesh = null;
+    this.selectedHaloMaterial = null;
+    this.selectedCoreMaterial = null;
+    this.selectedStemMaterial = null;
+    this._selectedHaloBaseSize = 0; // for the pulse animation in render()
     this._destroyed = false;
     this.ready = false; // becomes true once the base map + three.js layer are set up
   }
@@ -240,6 +253,15 @@ export class QuakeMapEngine {
         // right before our draw sidesteps that (we also render with
         // depthTest disabled on our own material, belt-and-suspenders).
         engine.renderer.clearDepth();
+        // Slow pulse on the selected-quake halo (opacity + size), so it
+        // keeps drawing the eye even after the initial camera fit settles —
+        // same trick as a "you are here" map pin.
+        if (engine.selectedHaloMesh) {
+          const pulse = 1 + 0.22 * Math.sin(performance.now() / 420);
+          const sizeAttr = engine.selectedHaloMesh.geometry.attributes.size;
+          sizeAttr.array[0] = engine._selectedHaloBaseSize * pulse;
+          sizeAttr.needsUpdate = true;
+        }
         engine.renderer.render(engine.scene, engine.camera);
         engine.map.triggerRepaint();
       },
@@ -253,6 +275,127 @@ export class QuakeMapEngine {
     this._onPointerMove = (e) => this._handlePointerMove(e);
     canvas.addEventListener('pointermove', this._onPointerMove);
     canvas.addEventListener('pointerleave', () => this.callbacks.onHover?.(null));
+  }
+
+  // ---- Selected-quake intensity overlay (region-area fill + station markers) ----
+  // Lazily loaded: the 194-feature region polygon set (~16MB) is only fetched
+  // once the earthquake browser panel actually selects a quake, not on app
+  // startup. Both new layers are inserted *before* the 3D custom layer (via
+  // beforeId) so the point cloud stays visually on top of the flat overlay.
+  async ensureQuakeIntensityLayers() {
+    if (this._destroyed || !this.map) return;
+    if (this._quakeLayersReady) return;
+    if (!this._quakeLayersPromise) {
+      this._quakeLayersPromise = (async () => {
+        const regions = await loadQuakeRegions();
+        if (this._destroyed) return;
+        this.map.addSource('quakeRegions', { type: 'geojson', data: regions, promoteId: 'code' });
+        this.map.addLayer(
+          {
+            id: 'quake-areas-fill',
+            type: 'fill',
+            source: 'quakeRegions',
+            paint: {
+              'fill-color': ['coalesce', ['feature-state', 'color'], 'rgba(0,0,0,0)'],
+              'fill-opacity': 0.7,
+            },
+          },
+          this.customLayer.id
+        );
+        this.map.addLayer(
+          {
+            id: 'quake-areas-line',
+            type: 'line',
+            source: 'quakeRegions',
+            paint: {
+              'line-color': 'rgba(0,0,0,0.35)',
+              'line-width': ['coalesce', ['feature-state', 'hasIntensity'], 0],
+            },
+          },
+          this.customLayer.id
+        );
+        this.map.addSource('quakeStations', { type: 'geojson', data: EMPTY_FEATURE_COLLECTION });
+        // No beforeId here (unlike the area fill/line above): this appends
+        // the layer to the very top of the stack, so station markers render
+        // above the 3D point-cloud custom layer as well as everything else.
+        this.map.addLayer({
+          id: 'quake-stations-symbol',
+          type: 'symbol',
+          source: 'quakeStations',
+          layout: {
+            // ズーム6未満は円が小さく数字が潰れるため、数字なしアイコンに切り替える
+            // (MeteoQuakeのstation-points-symbolと同じ挙動)。
+            'icon-image': [
+              'step', ['zoom'],
+              ['concat', 'station-icon-', ['get', 'intensityKey'], '-dot'],
+              6, ['concat', 'station-icon-', ['get', 'intensityKey'], '-num'],
+            ],
+            'icon-size': [
+              'interpolate', ['linear'], ['zoom'],
+              4, 5 / STATION_ICON_BASE_RADIUS,
+              7, 10 / STATION_ICON_BASE_RADIUS,
+              9, 14 / STATION_ICON_BASE_RADIUS,
+              11, 20 / STATION_ICON_BASE_RADIUS,
+              14, 30 / STATION_ICON_BASE_RADIUS,
+            ],
+            'icon-allow-overlap': true,
+            'icon-ignore-placement': true,
+            // 震度が大きいほど後(=前面)に描画されるよう、sort-keyに震度の並び順を使う。
+            'symbol-sort-key': ['get', 'sortOrder'],
+          },
+        });
+        this._paintedAreaCodes = new Set();
+        this._quakeLayersReady = true;
+      })();
+    }
+    return this._quakeLayersPromise;
+  }
+
+  _ensureStationIcons(colorSchemeId) {
+    if (this._quakeIconSchemeId === colorSchemeId) return;
+    const scheme = QUAKE_COLOR_SCHEMES[colorSchemeId] || QUAKE_COLOR_SCHEMES.legacy;
+    registerStationIcons(this.map, scheme);
+    this._quakeIconSchemeId = colorSchemeId;
+  }
+
+  /**
+   * Paints the felt-area distribution for a selected earthquake: region
+   * polygons colored via feature-state (for isArea:true / 震度速報-stage
+   * points) and individual station icons (for isArea:false / confirmed
+   * points, zoom-adaptive dot⇄numbered badge — see quakeStationIcons.js).
+   * `areaColors` is a Map<regionCode, hexColor>; `stationFeatures` is
+   * [{ lon, lat, intensityKey }]; `colorSchemeId` selects the badge palette.
+   */
+  async showQuakeIntensity(areaColors, stationFeatures, colorSchemeId) {
+    if (this._destroyed || !this.map) return;
+    await this.ensureQuakeIntensityLayers();
+    if (this._destroyed || !this.map) return;
+    this._ensureStationIcons(colorSchemeId);
+    this.clearQuakeIntensity();
+    areaColors.forEach((color, code) => {
+      this.map.setFeatureState({ source: 'quakeRegions', id: code }, { color, hasIntensity: 1 });
+    });
+    this._paintedAreaCodes = new Set(areaColors.keys());
+    const fc = {
+      type: 'FeatureCollection',
+      features: stationFeatures.map((p) => ({
+        type: 'Feature',
+        properties: { intensityKey: p.intensityKey, sortOrder: INTENSITY_ORDER.indexOf(p.intensityKey) },
+        geometry: { type: 'Point', coordinates: [p.lon, p.lat] },
+      })),
+    };
+    this.map.getSource('quakeStations')?.setData(fc);
+  }
+
+  clearQuakeIntensity() {
+    if (this._destroyed || !this.map) return;
+    if (this._paintedAreaCodes) {
+      this._paintedAreaCodes.forEach((code) => {
+        this.map.setFeatureState({ source: 'quakeRegions', id: code }, { color: null, hasIntensity: 0 });
+      });
+      this._paintedAreaCodes = new Set();
+    }
+    this.map.getSource('quakeStations')?.setData(EMPTY_FEATURE_COLLECTION);
   }
 
   _handlePointerMove(e) {
@@ -410,6 +553,147 @@ export class QuakeMapEngine {
 
     this.map?.triggerRepaint();
     this._reportStats(filtered);
+    this._rebuildSelectedMarker(); // altitude depends on this.state.exaggeration, same as the main cloud
+  }
+
+  // ---- Selected-quake hypocenter marker (emphasized halo + core point) ----
+  // Plotted the same way as every other point in the cloud (same lon/lat/
+  // depth -> Mercator transform, same depth-based color, same
+  // magnitude-based sizing via pixelSizeForMag) but larger, more opaque, and
+  // with a soft pulsing gold halo behind it so the browsed quake stays easy
+  // to spot once the camera has zoomed in among the surrounding cloud.
+  setSelectedQuakeHypocenter(record) {
+    this._selectedQuakeRecord =
+      record && Number.isFinite(record.lat) && Number.isFinite(record.lon) && Number.isFinite(record.depth)
+        ? record
+        : null;
+    this._rebuildSelectedMarker();
+  }
+
+  _disposeSelectedMarker() {
+    if (this.selectedHaloMesh) {
+      this.quakeGroup?.remove(this.selectedHaloMesh);
+      this.selectedHaloMesh.geometry.dispose();
+      this.selectedHaloMesh = null;
+    }
+    if (this.selectedCoreMesh) {
+      this.quakeGroup?.remove(this.selectedCoreMesh);
+      this.selectedCoreMesh.geometry.dispose();
+      this.selectedCoreMesh = null;
+    }
+    if (this.selectedStemMesh) {
+      this.quakeGroup?.remove(this.selectedStemMesh);
+      this.selectedStemMesh.geometry.dispose();
+      this.selectedStemMesh = null;
+    }
+  }
+
+  _rebuildSelectedMarker() {
+    if (!this.scene) return; // Three layer not ready yet
+    this._disposeSelectedMarker();
+
+    const rec = this._selectedQuakeRecord;
+    if (!rec) return;
+
+    const depth = Math.max(0, rec.depth);
+    const mag = Number.isFinite(rec.mag) ? rec.mag : 4; // M不明の地震でも見える大きさにしておく
+    const altitude = -depth * DEPTH_METERS_PER_KM * this.state.exaggeration;
+    const coord = maplibregl.MercatorCoordinate.fromLngLat([rec.lon, rec.lat], altitude);
+    const [r, g, b] = depthToRgb01(depth);
+    const baseSize = pixelSizeForMag(mag);
+    const position = [coord.x, coord.y, coord.z];
+
+    if (!this.selectedHaloMaterial) {
+      this.selectedHaloMaterial = new THREE.ShaderMaterial({
+        vertexShader: POINT_VERTEX_SHADER,
+        fragmentShader: POINT_FRAGMENT_SHADER,
+        uniforms: { opacity: { value: 0.75 } },
+        transparent: true,
+        depthTest: false,
+        depthWrite: false,
+        blending: THREE.AdditiveBlending, // soft glow rather than a flat disc
+      });
+    }
+    this._selectedHaloBaseSize = baseSize * 6.5;
+    const haloGeom = new THREE.BufferGeometry();
+    haloGeom.setAttribute('position', new THREE.Float32BufferAttribute(position, 3));
+    haloGeom.setAttribute('color', new THREE.Float32BufferAttribute([1, 1, 1], 3)); // white — reads as "selection", not "shallow"
+    haloGeom.setAttribute('size', new THREE.Float32BufferAttribute([this._selectedHaloBaseSize], 1));
+    this.selectedHaloMesh = new THREE.Points(haloGeom, this.selectedHaloMaterial);
+    this.selectedHaloMesh.frustumCulled = false;
+    this.quakeGroup.add(this.selectedHaloMesh);
+
+    if (!this.selectedCoreMaterial) {
+      this.selectedCoreMaterial = new THREE.ShaderMaterial({
+        vertexShader: POINT_VERTEX_SHADER,
+        fragmentShader: POINT_FRAGMENT_SHADER,
+        uniforms: { opacity: { value: 0.95 } }, // more opaque than the ambient cloud (0.62) so it doesn't get lost among it
+        transparent: true,
+        depthTest: false,
+        depthWrite: false,
+      });
+    }
+    const coreGeom = new THREE.BufferGeometry();
+    coreGeom.setAttribute('position', new THREE.Float32BufferAttribute(position, 3));
+    coreGeom.setAttribute('color', new THREE.Float32BufferAttribute([r, g, b], 3)); // same depth color as any other point
+    coreGeom.setAttribute('size', new THREE.Float32BufferAttribute([baseSize * 1.7], 1));
+    this.selectedCoreMesh = new THREE.Points(coreGeom, this.selectedCoreMaterial);
+    this.selectedCoreMesh.frustumCulled = false;
+    this.quakeGroup.add(this.selectedCoreMesh);
+
+    // Same "引き出し線" (surface stem) as the ambient cloud draws for its own
+    // points — same on/off toggle (state.showStems) and depth cutoff, just
+    // brighter, so the selected quake still reads as "one of these dots",
+    // consistently, whether stems are on or off.
+    if (this.state.showStems && depth > 3) {
+      const surface = maplibregl.MercatorCoordinate.fromLngLat([rec.lon, rec.lat], 0);
+      if (!this.selectedStemMaterial) {
+        this.selectedStemMaterial = new THREE.LineBasicMaterial({
+          vertexColors: true,
+          transparent: true,
+          opacity: 0.6,
+          depthTest: false,
+          depthWrite: false,
+        });
+      }
+      const stemGeom = new THREE.BufferGeometry();
+      stemGeom.setAttribute(
+        'position',
+        new THREE.Float32BufferAttribute([surface.x, surface.y, surface.z, coord.x, coord.y, coord.z], 3)
+      );
+      stemGeom.setAttribute('color', new THREE.Float32BufferAttribute([r, g, b, r, g, b], 3));
+      this.selectedStemMesh = new THREE.LineSegments(stemGeom, this.selectedStemMaterial);
+      this.selectedStemMesh.frustumCulled = false;
+      this.selectedStemMesh.renderOrder = -1; // behind the point markers, same as the ambient cloud's stems
+      this.quakeGroup.add(this.selectedStemMesh);
+    }
+
+    this.map?.triggerRepaint();
+  }
+
+  // ---- Camera framing for the earthquake browser ----
+  // Fits the given [lon, lat] points (hypocenter + every station/area point
+  // that recorded shaking) into view. A single point flies in to a fixed
+  // regional zoom instead (fitBounds degenerates on a zero-size box).
+  // Padding is skewed toward the bottom-right to leave room for the
+  // IconDock panel that's showing the quake being framed.
+  fitQuakeBounds(coords) {
+    if (this._destroyed || !this.map || !Array.isArray(coords) || coords.length === 0) return;
+    if (coords.length === 1) {
+      this.map.flyTo({ center: coords[0], zoom: Math.max(this.map.getZoom(), 7), duration: 900 });
+      return;
+    }
+    let minLng = Infinity, minLat = Infinity, maxLng = -Infinity, maxLat = -Infinity;
+    coords.forEach(([lng, lat]) => {
+      if (lng < minLng) minLng = lng;
+      if (lng > maxLng) maxLng = lng;
+      if (lat < minLat) minLat = lat;
+      if (lat > maxLat) maxLat = lat;
+    });
+    this.map.fitBounds(
+      [[minLng, minLat], [maxLng, maxLat]],
+      { padding: { top: 80, bottom: 170, left: 60, right: 330 }, maxZoom: 9, duration: 900 }
+    );
   }
 
   _reportStats(filtered) {
@@ -431,6 +715,10 @@ export class QuakeMapEngine {
     const canvas = this.map?.getCanvas();
     if (canvas && this._onPointerMove) canvas.removeEventListener('pointermove', this._onPointerMove);
     this._clearMeshes();
+    this._disposeSelectedMarker();
+    this.selectedHaloMaterial?.dispose();
+    this.selectedCoreMaterial?.dispose();
+    this.selectedStemMaterial?.dispose();
     this.pointsMaterial?.dispose();
     this.map?.remove();
   }
