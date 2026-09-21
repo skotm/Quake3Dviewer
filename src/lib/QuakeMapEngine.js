@@ -679,8 +679,27 @@ export class QuakeMapEngine {
   // IconDock panel that's showing the quake being framed.
   fitQuakeBounds(coords) {
     if (this._destroyed || !this.map || !Array.isArray(coords) || coords.length === 0) return;
+
+    // The fixed padding below leaves room for the IconDock panel showing
+    // the quake being framed (bottom-right on desktop). On a narrow phone
+    // viewport those same pixel values can approach or exceed the
+    // viewport's own width/height, which makes fitBounds' internal math
+    // blow up and center on something far from the actual quake. Scale
+    // each side down to a fraction of the current container size instead,
+    // so desktop keeps its usual padding while mobile gets a smaller,
+    // still-safe margin.
+    const el = this.map.getContainer();
+    const w = el.clientWidth || 1;
+    const h = el.clientHeight || 1;
+    const padding = {
+      top: Math.min(80, h * 0.12),
+      bottom: Math.min(170, h * 0.3),
+      left: Math.min(60, w * 0.12),
+      right: Math.min(330, w * 0.38),
+    };
+
     if (coords.length === 1) {
-      this.map.flyTo({ center: coords[0], zoom: Math.max(this.map.getZoom(), 7), duration: 900 });
+      this.map.flyTo({ center: coords[0], zoom: Math.max(this.map.getZoom(), 7), duration: 900, padding });
       return;
     }
     let minLng = Infinity, minLat = Infinity, maxLng = -Infinity, maxLat = -Infinity;
@@ -690,10 +709,7 @@ export class QuakeMapEngine {
       if (lat < minLat) minLat = lat;
       if (lat > maxLat) maxLat = lat;
     });
-    this.map.fitBounds(
-      [[minLng, minLat], [maxLng, maxLat]],
-      { padding: { top: 80, bottom: 170, left: 60, right: 330 }, maxZoom: 9, duration: 900 }
-    );
+    this.map.fitBounds([[minLng, minLat], [maxLng, maxLat]], { padding, maxZoom: 9, duration: 900 });
   }
 
   _reportStats(filtered) {
