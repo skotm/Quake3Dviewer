@@ -11,6 +11,16 @@ const ITEMS = [
   { id: 2, label: 'メニュー3' },
 ];
 
+// Seismograph-trace icon, ported as-is from MeteoQuake's NAV_ICONS.quake.
+function QuakeIcon() {
+  return (
+    <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round">
+      <polyline points="2,12 4,12 5,7 6,17 8,4 9,20 11,10 12,12 14,12" />
+      <polyline points="14,12 15,9 16,15 18,12 22,12" />
+    </svg>
+  );
+}
+
 // Layout geometry, in px. Every position below is derived from these so the
 // slide animation (see icon-dock-slot's `transform`) and the container's
 // own width/height stay perfectly in sync — no measuring the DOM needed.
@@ -73,7 +83,7 @@ export default function IconDock({ engineRef }) {
               onClick={() => toggle(i)}
               aria-label={item.id === 0 ? '地震情報' : `${item.label}（未設定）`}
             >
-              <span className="icon-dock-dot" />
+              {item.id === 0 ? <QuakeIcon /> : <span className="icon-dock-dot" />}
             </PressableButton>
           </div>
         );

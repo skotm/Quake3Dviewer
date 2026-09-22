@@ -304,12 +304,14 @@ input[type="range"]::-moz-range-thumb {
   display: flex;
   align-items: center;
   justify-content: center;
+  color: var(--text-tertiary);
 }
 .icon-dock-btn:hover {
   background: rgba(255, 255, 255, 0.08);
 }
 .icon-dock-btn.active {
   background: rgba(100, 210, 255, 0.16);
+  color: #64d2ff;
 }
 .icon-dock-btn.active .icon-dock-dot {
   background: #64d2ff;
