@@ -97,7 +97,7 @@ export function splitIntensityLabel(label) {
   return { num: m[1], suffix: m[2] || null };
 }
 
-function maxScaleToIntensityKey(maxScale) {
+export function maxScaleToIntensityKey(maxScale) {
   const map = {
     '-1': '0', '0': '0',
     '10': '1', '20': '2', '30': '3', '40': '4',

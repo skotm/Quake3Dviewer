@@ -1,22 +1,34 @@
 import { useState } from 'react';
 import PressableButton from './PressableButton.jsx';
 import QuakePanel from './quake/QuakePanel.jsx';
+import QuakeSearchPanel from './quake/QuakeSearchPanel.jsx';
 import { useQuakeFeed } from '../lib/useQuakeFeed.js';
+import { useEqdbSearch } from '../lib/useEqdbSearch.js';
 
-// Slot 0 is the earthquake browser (real feature); slots 1-2 are still
-// placeholders until their features are decided.
+// Slot 0 is the earthquake browser, slot 1 is the eqdb search feature
+// (both real features); slot 2 is still a placeholder.
 const ITEMS = [
   { id: 0, label: '地震' },
-  { id: 1, label: 'メニュー2' },
+  { id: 1, label: '地震検索' },
   { id: 2, label: 'メニュー3' },
 ];
 
 // Seismograph-trace icon, ported as-is from MeteoQuake's NAV_ICONS.quake.
 function QuakeIcon() {
   return (
-    <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round">
+    <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round">
       <polyline points="2,12 4,12 5,7 6,17 8,4 9,20 11,10 12,12 14,12" />
       <polyline points="14,12 15,9 16,15 18,12 22,12" />
+    </svg>
+  );
+}
+
+// Magnifying-glass icon, ported as-is from MeteoQuake's SearchGlassIcon.
+function SearchGlassIcon() {
+  return (
+    <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+      <circle cx="10.5" cy="10.5" r="6.5" />
+      <line x1="15.3" y1="15.3" x2="20.5" y2="20.5" />
     </svg>
   );
 }
@@ -42,11 +54,21 @@ const QUAKE_OPEN_WIDTH = 300;
 const QUAKE_LIST_HEIGHT = TOPBAR_HEIGHT + 300;
 const QUAKE_DETAIL_HEIGHT = TOPBAR_HEIGHT + 210;
 
-function openSizeFor(index, quakeFeed) {
+// Search slot: same width as the browser (same detail card), but taller
+// while showing the form + scrollable results.
+const SEARCH_FORM_HEIGHT = TOPBAR_HEIGHT + 380;
+
+function openSizeFor(index, quakeFeed, eqdbSearch) {
   if (index === 0) {
     return {
       width: QUAKE_OPEN_WIDTH,
       height: quakeFeed.selected ? QUAKE_DETAIL_HEIGHT : QUAKE_LIST_HEIGHT,
+    };
+  }
+  if (index === 1) {
+    return {
+      width: QUAKE_OPEN_WIDTH,
+      height: eqdbSearch.selected ? QUAKE_DETAIL_HEIGHT : SEARCH_FORM_HEIGHT,
     };
   }
   return { width: DEFAULT_OPEN_WIDTH, height: DEFAULT_OPEN_HEIGHT };
@@ -57,12 +79,13 @@ export default function IconDock({ engineRef }) {
   const open = active != null;
   const toggle = (i) => setActive((cur) => (cur === i ? null : i));
 
-  // Kept mounted (and the WebSocket connected) for the dock's whole
-  // lifetime, not just while the slot is open, so the list is already
-  // current — and new quakes have already arrived — the moment it's opened.
+  // Kept mounted (and the WebSocket / map-sync effects live) for the dock's
+  // whole lifetime, not just while a slot is open, so both are already
+  // current the moment the person opens them.
   const quakeFeed = useQuakeFeed(engineRef);
+  const eqdbSearch = useEqdbSearch(engineRef, quakeFeed.colorScheme);
 
-  const { width: openWidth, height: openHeight } = openSizeFor(active ?? 0, quakeFeed);
+  const { width: openWidth, height: openHeight } = openSizeFor(active ?? 0, quakeFeed, eqdbSearch);
 
   return (
     <div
@@ -81,9 +104,9 @@ export default function IconDock({ engineRef }) {
             <PressableButton
               className={`icon-dock-btn ${active === i ? 'active' : ''}`}
               onClick={() => toggle(i)}
-              aria-label={item.id === 0 ? '地震情報' : `${item.label}（未設定）`}
+              aria-label={item.id === 0 || item.id === 1 ? item.label : `${item.label}（未設定）`}
             >
-              {item.id === 0 ? <QuakeIcon /> : <span className="icon-dock-dot" />}
+              {item.id === 0 ? <QuakeIcon /> : item.id === 1 ? <SearchGlassIcon /> : <span className="icon-dock-dot" />}
             </PressableButton>
           </div>
         );
@@ -91,7 +114,8 @@ export default function IconDock({ engineRef }) {
 
       <div className="icon-dock-content" style={{ opacity: open ? 1 : 0, pointerEvents: open ? 'auto' : 'none' }}>
         {open && active === 0 && <QuakePanel feed={quakeFeed} />}
-        {open && active !== 0 && (
+        {open && active === 1 && <QuakeSearchPanel feed={eqdbSearch} colorScheme={quakeFeed.colorScheme} />}
+        {open && active === 2 && (
           <>
             <div className="icon-dock-content-title">{ITEMS[active].label}</div>
             <div className="icon-dock-content-body">まだ中身は未設定です。</div>

@@ -8,6 +8,30 @@ import { QUAKE_COLOR_SCHEMES, INTENSITY_ORDER } from './quakeFeed.js';
 
 const EMPTY_FEATURE_COLLECTION = { type: 'FeatureCollection', features: [] };
 
+// Parses the P2P地震情報API's "YYYY/MM/DD HH:MM:SS" occurrence time (JST) into
+// a UTC epoch ms, the same representation jma.js's parseJmaTime() produces
+// for rawFeatures — so the two can be compared directly when matching a
+// browsed quake against the JMA hypocenter cloud (see _findJmaMatch below).
+function parseP2pQuakeTime(raw) {
+  if (!raw) return null;
+  const [datePart, timePart] = raw.split(' ');
+  if (!datePart || !timePart) return null;
+  const [y, mo, d] = datePart.split('/').map(Number);
+  const [h, mi, s] = timePart.split(':').map(Number);
+  if ([y, mo, d, h, mi].some((n) => Number.isNaN(n))) return null;
+  return Date.UTC(y, mo - 1, d, h, mi, Number.isFinite(s) ? s : 0) - 9 * 3600 * 1000;
+}
+
+function haversineKm(lat1, lon1, lat2, lon2) {
+  const R = 6371;
+  const dLat = ((lat2 - lat1) * Math.PI) / 180;
+  const dLon = ((lon2 - lon1) * Math.PI) / 180;
+  const a =
+    Math.sin(dLat / 2) ** 2 +
+    Math.cos((lat1 * Math.PI) / 180) * Math.cos((lat2 * Math.PI) / 180) * Math.sin(dLon / 2) ** 2;
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+}
+
 const MAP_DATA_VERSION = 'v1'; // bump if public/data files change shape
 
 // Meters of visual altitude per km of real depth, before the user's
@@ -563,11 +587,51 @@ export class QuakeMapEngine {
   // with a soft pulsing gold halo behind it so the browsed quake stays easy
   // to spot once the camera has zoomed in among the surrounding cloud.
   setSelectedQuakeHypocenter(record) {
-    this._selectedQuakeRecord =
-      record && Number.isFinite(record.lat) && Number.isFinite(record.lon) && Number.isFinite(record.depth)
-        ? record
-        : null;
+    if (!record || !Number.isFinite(record.lat) || !Number.isFinite(record.lon) || !Number.isFinite(record.depth)) {
+      this._selectedQuakeRecord = null;
+      this._rebuildSelectedMarker();
+      return;
+    }
+    // 気象庁の震源データを読み込み済みの期間内であれば、その正確な震源で
+    // 上書きする(発生時刻・M・深さ・緯度経度が近い記録をrawFeaturesから探す)。
+    // 見つからなければP2P地震情報自身の値をそのまま使う。
+    const matched = this._findJmaMatch(record);
+    this._selectedQuakeRecord = matched
+      ? { lat: matched.lat, lon: matched.lon, depth: matched.depth, mag: Number.isFinite(matched.mag) ? matched.mag : record.mag }
+      : { lat: record.lat, lon: record.lon, depth: record.depth, mag: record.mag };
     this._rebuildSelectedMarker();
+  }
+
+  // Looks for the JMA hypocenter cloud record (rawFeatures — everything
+  // currently loaded for the active date range, regardless of the minMag
+  // filter) that corresponds to a P2P地震情報 card: same occurrence time
+  // (within 90s — P2P and JMA occasionally round differently), and among
+  // those, the closest by position/depth/magnitude. Returns null (falls
+  // back to the P2P card's own hypocenter) when nothing is loaded for that
+  // period or nothing plausibly matches.
+  _findJmaMatch(record) {
+    if (!record.time || !Array.isArray(this.rawFeatures) || this.rawFeatures.length === 0) return null;
+    const cardTime = parseP2pQuakeTime(record.time);
+    if (cardTime == null) return null;
+
+    const TIME_TOLERANCE_MS = 90 * 1000;
+    let best = null;
+    let bestScore = Infinity;
+    for (const f of this.rawFeatures) {
+      if (f.time == null) continue;
+      const dt = Math.abs(f.time - cardTime);
+      if (dt > TIME_TOLERANCE_MS) continue;
+      const dist = haversineKm(f.lat, f.lon, record.lat, record.lon);
+      if (dist > 300) continue; // 明らかに別の地震
+      const depthDiff = Number.isFinite(record.depth) ? Math.abs(f.depth - record.depth) : 0;
+      const magDiff = Number.isFinite(record.mag) ? Math.abs(f.mag - record.mag) : 0;
+      const score = dt / 1000 + dist * 2 + depthDiff * 3 + magDiff * 10;
+      if (score < bestScore) {
+        bestScore = score;
+        best = f;
+      }
+    }
+    return best;
   }
 
   _disposeSelectedMarker() {
