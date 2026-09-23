@@ -8,11 +8,12 @@ import { useEqdbSearch } from '../lib/useEqdbSearch.js';
 
 // Slot 0 is the earthquake browser, slot 1 the eqdb search feature, slot 2
 // the map display settings moved down from the old standalone top-right
-// panel — all three are real features now.
+// panel. Slot 3 (volcano info) is icon-only for now — no panel wired up yet.
 const ITEMS = [
   { id: 0, label: '地震' },
   { id: 1, label: '地震検索' },
   { id: 2, label: '震源表示' },
+  { id: 3, label: '火山情報' },
 ];
 
 // Seismograph-trace icon, ported as-is from MeteoQuake's NAV_ICONS.quake.
@@ -47,6 +48,21 @@ function GridDotsIcon() {
   );
 }
 
+// Volcano icon — provided by the user directly (viewBox/paths kept as-is;
+// only the color is switched from a hardcoded gray to currentColor so it
+// follows the same idle/active tint the other icons use).
+function VolcanoIcon() {
+  return (
+    <svg viewBox="0 0 64 63" width="22" height="22" fill="none" stroke="currentColor" strokeWidth="5" strokeLinejoin="round" strokeLinecap="round">
+      <g transform="translate(3.000000, 1.000000)">
+        <path d="M52,0 C49.2,0 46.7,1.9 45.6,4.5 L45,4.5 C42.4,4.5 40.3,6.5 40,9.1 C38.1,9.6 36.6,11.5 36.6,13.7 C36.6,14.2 36.7,14.6 36.8,15 L36.6,15 C35.3,15 34.2,16.1 34.2,17.5 C34.2,18.9 35.3,20 36.6,20 C37.8,20 38.8,19 39,17.8 C39.6,18.2 40.4,18.4 41.2,18.4 C43,18.4 44.5,17.3 45.3,15.8 C46,16.3 46.9,16.6 47.9,16.6 C49.7,16.6 51.2,15.5 51.9,14 C56,13.8 59.1,11.3 59.1,7.5 C59,3.4 55.8,0 52,0 L52,0 Z" />
+        <path d="M58.6,61 L37.4,24 L31,24 L19.5,44.1 L14.4,37.2 L-0.5,61 L58.6,61 Z" />
+        <path d="M43.1,35.5 L39.1,40.2 L34.2,37.2 L30.2,40.2 L25.3,35.2" />
+      </g>
+    </svg>
+  );
+}
+
 // Layout geometry, in px. Every position below is derived from these so the
 // slide animation (see icon-dock-slot's `transform`) and the container's
 // own width/height stay perfectly in sync — no measuring the DOM needed.
@@ -74,6 +90,10 @@ const SEARCH_FORM_HEIGHT = TOPBAR_HEIGHT + 420; // 380 + room for 開始日/終�
 // stems toggle, refresh button) without its own inner scroll kicking in.
 const SETTINGS_HEIGHT = TOPBAR_HEIGHT + 360;
 
+// Placeholder slot (volcano info not built yet): small fixed footprint,
+// same shape the other slots used before they had real content.
+const PLACEHOLDER_HEIGHT = TOPBAR_HEIGHT + 104;
+
 function openSizeFor(index, quakeFeed, eqdbSearch) {
   if (index === 0) {
     return {
@@ -87,7 +107,10 @@ function openSizeFor(index, quakeFeed, eqdbSearch) {
       height: eqdbSearch.selected ? QUAKE_DETAIL_HEIGHT : SEARCH_FORM_HEIGHT,
     };
   }
-  return { width: QUAKE_OPEN_WIDTH, height: SETTINGS_HEIGHT };
+  if (index === 2) {
+    return { width: QUAKE_OPEN_WIDTH, height: SETTINGS_HEIGHT };
+  }
+  return { width: QUAKE_OPEN_WIDTH, height: PLACEHOLDER_HEIGHT };
 }
 
 export default function IconDock({ engineRef, mapSettings }) {
@@ -122,7 +145,7 @@ export default function IconDock({ engineRef, mapSettings }) {
               onClick={() => toggle(i)}
               aria-label={item.label}
             >
-              {item.id === 0 ? <QuakeIcon /> : item.id === 1 ? <SearchGlassIcon /> : <GridDotsIcon />}
+              {item.id === 0 ? <QuakeIcon /> : item.id === 1 ? <SearchGlassIcon /> : item.id === 2 ? <GridDotsIcon /> : <VolcanoIcon />}
             </PressableButton>
           </div>
         );
@@ -132,6 +155,12 @@ export default function IconDock({ engineRef, mapSettings }) {
         {open && active === 0 && <QuakePanel feed={quakeFeed} />}
         {open && active === 1 && <QuakeSearchPanel feed={eqdbSearch} colorScheme={quakeFeed.colorScheme} />}
         {open && active === 2 && <MapSettingsPanel {...mapSettings} />}
+        {open && active === 3 && (
+          <>
+            <div className="icon-dock-content-title">火山情報</div>
+            <div className="icon-dock-content-body">まだ中身は未設定です。</div>
+          </>
+        )}
       </div>
     </div>
   );

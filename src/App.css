@@ -61,6 +61,7 @@
   font-size: 11px;
   color: var(--text-secondary);
   margin-bottom: 6px;
+  padding-right: 2px;
   display: flex;
   justify-content: space-between;
   align-items: baseline;
@@ -370,7 +371,11 @@ input[type="range"]::-moz-range-thumb {
   min-height: 0;
   overflow-y: auto;
   overflow-x: hidden; /* without this, browsers force overflow-x to "auto" too whenever overflow-y isn't "visible" — that's what was drawing the horizontal scrollbar */
-  margin: 0 -2px;
+  /* Was `margin: 0 -2px` to let row backgrounds bleed a touch past the
+     content inset — but that also pushed full-width children (date inputs,
+     the settings sliders' right-aligned value text) 2px past the visible
+     edge, where the ancestor's own overflow:hidden then clipped them.
+     Not worth it; drop the negative margin. */
   scrollbar-width: none; /* Firefox: keep scrolling, hide the bar itself */
   -ms-overflow-style: none; /* old Edge */
 }
