@@ -2,15 +2,17 @@ import { useState } from 'react';
 import PressableButton from './PressableButton.jsx';
 import QuakePanel from './quake/QuakePanel.jsx';
 import QuakeSearchPanel from './quake/QuakeSearchPanel.jsx';
+import MapSettingsPanel from './MapSettingsPanel.jsx';
 import { useQuakeFeed } from '../lib/useQuakeFeed.js';
 import { useEqdbSearch } from '../lib/useEqdbSearch.js';
 
-// Slot 0 is the earthquake browser, slot 1 is the eqdb search feature
-// (both real features); slot 2 is still a placeholder.
+// Slot 0 is the earthquake browser, slot 1 the eqdb search feature, slot 2
+// the map display settings moved down from the old standalone top-right
+// panel — all three are real features now.
 const ITEMS = [
   { id: 0, label: '地震' },
   { id: 1, label: '地震検索' },
-  { id: 2, label: 'メニュー3' },
+  { id: 2, label: '震源表示' },
 ];
 
 // Seismograph-trace icon, ported as-is from MeteoQuake's NAV_ICONS.quake.
@@ -33,6 +35,18 @@ function SearchGlassIcon() {
   );
 }
 
+// Settings icon: four dots at the corners of a square.
+function GridDotsIcon() {
+  return (
+    <svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor">
+      <circle cx="7" cy="7" r="2.3" />
+      <circle cx="17" cy="7" r="2.3" />
+      <circle cx="7" cy="17" r="2.3" />
+      <circle cx="17" cy="17" r="2.3" />
+    </svg>
+  );
+}
+
 // Layout geometry, in px. Every position below is derived from these so the
 // slide animation (see icon-dock-slot's `transform`) and the container's
 // own width/height stay perfectly in sync — no measuring the DOM needed.
@@ -44,10 +58,6 @@ const CLOSED_WIDTH = BTN + PAD * 2;
 const CLOSED_HEIGHT = ITEMS.length * BTN + (ITEMS.length - 1) * GAP_CLOSED + PAD * 2;
 const TOPBAR_HEIGHT = BTN + PAD * 2;
 
-// Default (placeholder) slots: small fixed footprint.
-const DEFAULT_OPEN_WIDTH = 240;
-const DEFAULT_OPEN_HEIGHT = TOPBAR_HEIGHT + 104;
-
 // Earthquake slot: wider (room for the detail card's M/深さ columns) and
 // taller in list mode (scrollable) than in detail mode (one card's worth).
 const QUAKE_OPEN_WIDTH = 300;
@@ -56,7 +66,13 @@ const QUAKE_DETAIL_HEIGHT = TOPBAR_HEIGHT + 210;
 
 // Search slot: same width as the browser (same detail card), but taller
 // while showing the form + scrollable results.
-const SEARCH_FORM_HEIGHT = TOPBAR_HEIGHT + 380;
+const SEARCH_FORM_HEIGHT = TOPBAR_HEIGHT + 420; // 380 + room for 開始日/終了日 now stacking into two rows instead of one
+
+// Settings slot: same width again for visual consistency across the three
+// real slots; tall enough for every control row (period toggle + either the
+// day-count row or the two date inputs, minMag slider, exaggeration slider,
+// stems toggle, refresh button) without its own inner scroll kicking in.
+const SETTINGS_HEIGHT = TOPBAR_HEIGHT + 360;
 
 function openSizeFor(index, quakeFeed, eqdbSearch) {
   if (index === 0) {
@@ -71,10 +87,10 @@ function openSizeFor(index, quakeFeed, eqdbSearch) {
       height: eqdbSearch.selected ? QUAKE_DETAIL_HEIGHT : SEARCH_FORM_HEIGHT,
     };
   }
-  return { width: DEFAULT_OPEN_WIDTH, height: DEFAULT_OPEN_HEIGHT };
+  return { width: QUAKE_OPEN_WIDTH, height: SETTINGS_HEIGHT };
 }
 
-export default function IconDock({ engineRef }) {
+export default function IconDock({ engineRef, mapSettings }) {
   const [active, setActive] = useState(null);
   const open = active != null;
   const toggle = (i) => setActive((cur) => (cur === i ? null : i));
@@ -104,9 +120,9 @@ export default function IconDock({ engineRef }) {
             <PressableButton
               className={`icon-dock-btn ${active === i ? 'active' : ''}`}
               onClick={() => toggle(i)}
-              aria-label={item.id === 0 || item.id === 1 ? item.label : `${item.label}（未設定）`}
+              aria-label={item.label}
             >
-              {item.id === 0 ? <QuakeIcon /> : item.id === 1 ? <SearchGlassIcon /> : <span className="icon-dock-dot" />}
+              {item.id === 0 ? <QuakeIcon /> : item.id === 1 ? <SearchGlassIcon /> : <GridDotsIcon />}
             </PressableButton>
           </div>
         );
@@ -115,12 +131,7 @@ export default function IconDock({ engineRef }) {
       <div className="icon-dock-content" style={{ opacity: open ? 1 : 0, pointerEvents: open ? 'auto' : 'none' }}>
         {open && active === 0 && <QuakePanel feed={quakeFeed} />}
         {open && active === 1 && <QuakeSearchPanel feed={eqdbSearch} colorScheme={quakeFeed.colorScheme} />}
-        {open && active === 2 && (
-          <>
-            <div className="icon-dock-content-title">{ITEMS[active].label}</div>
-            <div className="icon-dock-content-body">まだ中身は未設定です。</div>
-          </>
-        )}
+        {open && active === 2 && <MapSettingsPanel {...mapSettings} />}
       </div>
     </div>
   );

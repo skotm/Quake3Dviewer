@@ -31,7 +31,7 @@ export default function QuakeSearchPanel({ feed, colorScheme }) {
 
       <div className="quake-panel-scroll">
         <div className="quake-search-form">
-          <div className="quake-search-row">
+          <div className="quake-search-row quake-search-row-dates">
             <label className="quake-field">
               <span className="quake-field-label">開始日</span>
               <input

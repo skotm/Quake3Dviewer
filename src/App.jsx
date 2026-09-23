@@ -1,7 +1,5 @@
 import { useRef, useState, useCallback } from 'react';
 import MapView from './components/MapView.jsx';
-import ControlPanel from './components/ControlPanel.jsx';
-import StatsPanel from './components/StatsPanel.jsx';
 import Legend from './components/Legend.jsx';
 import IconDock from './components/IconDock.jsx';
 import Tooltip from './components/Tooltip.jsx';
@@ -22,15 +20,10 @@ export default function App() {
   const [exaggeration, setExaggeration] = useState(1.5);
   const [showStems, setShowStems] = useState(true);
   const [reloadToken, setReloadToken] = useState(0);
-  const [controlsCollapsed, setControlsCollapsed] = useState(
-    typeof window !== 'undefined' ? window.innerWidth <= 720 : false
-  );
 
-  const [stats, setStats] = useState({ count: null, maxMag: null, latest: null });
   const [hover, setHover] = useState({ record: null, pos: { x: 0, y: 0 } });
   const [status, setStatus] = useState({ mode: 'loading', message: '読み込み中…' });
 
-  const handleStats = useCallback((s) => setStats(s), []);
   const handleHover = useCallback((record, pos) => {
     setHover({ record, pos: pos || { x: 0, y: 0 } });
   }, []);
@@ -58,7 +51,6 @@ export default function App() {
         exaggeration={exaggeration}
         showStems={showStems}
         reloadToken={reloadToken}
-        onStats={handleStats}
         onHover={handleHover}
         onStatus={handleStatus}
         engineRef={engineRef}
@@ -69,24 +61,20 @@ export default function App() {
         <Legend />
       </div>
 
-      <ControlPanel
-        rangeMode={rangeMode} setRangeMode={setRangeMode}
-        days={days} setDays={setDays}
-        customStart={customStart} setCustomStart={setCustomStart}
-        customEnd={customEnd} setCustomEnd={setCustomEnd}
-        minMag={minMag} setMinMag={setMinMag}
-        exaggeration={exaggeration} setExaggeration={setExaggeration}
-        showStems={showStems} setShowStems={setShowStems}
-        onRefresh={handleRefresh}
-        collapsed={controlsCollapsed}
-        onToggleCollapsed={() => setControlsCollapsed((c) => !c)}
-      />
-
-      <div className="bottom-left-cluster">
-        <StatsPanel stats={stats} />
-      </div>
       <div className="bottom-right-dock">
-        <IconDock engineRef={engineRef} />
+        <IconDock
+          engineRef={engineRef}
+          mapSettings={{
+            rangeMode, setRangeMode,
+            days, setDays,
+            customStart, setCustomStart,
+            customEnd, setCustomEnd,
+            minMag, setMinMag,
+            exaggeration, setExaggeration,
+            showStems, setShowStems,
+            onRefresh: handleRefresh,
+          }}
+        />
       </div>
       <Tooltip record={hover.record} pos={hover.pos} />
       <StatusOverlay status={status} onRetry={handleRetry} onUseSample={handleUseSample} />
