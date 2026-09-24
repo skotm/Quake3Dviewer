@@ -5,8 +5,24 @@ import { depthToRgb01, pixelSizeForMag } from './color.js';
 import { loadQuakeRegions } from './quakeAreas.js';
 import { registerStationIcons, STATION_ICON_BASE_RADIUS } from './quakeStationIcons.js';
 import { QUAKE_COLOR_SCHEMES, INTENSITY_ORDER } from './quakeFeed.js';
+import { registerVolcanoIcons, VOLCANO_ICON_BASE_RADIUS } from './volcanoIcons.js';
 
 const EMPTY_FEATURE_COLLECTION = { type: 'FeatureCollection', features: [] };
+
+function escapeHtml(str) {
+  return String(str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
+}
+
+// "2026-09-12T09:30:00+09:00" -> "2026/09/12 09:30"
+function formatVolcanoPopupTime(iso) {
+  const m = String(iso).match(/^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})/);
+  if (!m) return iso;
+  return `${m[1]}/${m[2]}/${m[3]} ${m[4]}:${m[5]}`;
+}
 
 // Parses the P2P地震情報API's "YYYY/MM/DD HH:MM:SS" occurrence time (JST) into
 // a UTC epoch ms, the same representation jma.js's parseJmaTime() produces
@@ -121,6 +137,11 @@ export class QuakeMapEngine {
     this._selectedHaloBaseSize = 0; // for the pulse animation in render()
     this._destroyed = false;
     this.ready = false; // becomes true once the base map + three.js layer are set up
+
+    // 火山シンボルレイヤー(2D, symbolレイヤーのみ。three.jsの点群とは別)
+    this._volcanoLayerReady = false;
+    this._volcanoLayerPromise = null;
+    this._volcanoPopup = null;
   }
 
   async init() {
@@ -155,7 +176,9 @@ export class QuakeMapEngine {
     });
     this.map = map;
 
-    await new Promise((resolve) => map.on('load', resolve));
+    // 他のメソッド(setVolcanoMarkers等)からも「mapのload完了」を待てるように保持しておく。
+    this._loadedPromise = new Promise((resolve) => map.on('load', resolve));
+    await this._loadedPromise;
     if (this._destroyed) return;
 
     this.callbacks.onStatus?.('loading', '地図データを読み込んでいます…');
@@ -776,6 +799,115 @@ export class QuakeMapEngine {
     this.map.fitBounds([[minLng, minLat], [maxLng, maxLat]], { padding, maxZoom: 9, duration: 900 });
   }
 
+  // ---- Volcano markers (2D symbol layer, independent from the quake point cloud) ----
+
+  // symbolレイヤー・アイコン画像・クリック/ホバーハンドラを初回だけ用意する。
+  // 複数箇所から並行して呼ばれても一度しかセットアップしないよう、
+  // Promiseをキャッシュして返す（他の_ensure...系メソッドと同じパターン）。
+  ensureVolcanoLayer() {
+    if (this._destroyed || !this.map) return Promise.resolve();
+    if (this._volcanoLayerReady) return Promise.resolve();
+    if (!this._volcanoLayerPromise) {
+      this._volcanoLayerPromise = (async () => {
+        if (this._loadedPromise) await this._loadedPromise;
+        if (this._destroyed || !this.map) return;
+
+        registerVolcanoIcons(this.map);
+        this.map.addSource('volcanoes', { type: 'geojson', data: EMPTY_FEATURE_COLLECTION });
+        this.map.addLayer({
+          id: 'volcano-symbol',
+          type: 'symbol',
+          source: 'volcanoes',
+          layout: {
+            'icon-image': ['get', 'iconId'],
+            'icon-size': [
+              'interpolate', ['linear'], ['zoom'],
+              3, 12 / VOLCANO_ICON_BASE_RADIUS,
+              6, 17 / VOLCANO_ICON_BASE_RADIUS,
+              9, 24 / VOLCANO_ICON_BASE_RADIUS,
+            ],
+            'icon-allow-overlap': true,
+            'icon-ignore-placement': true,
+            // 警戒度が高い(rankが大きい)火山ほど、重なった際に前面に描画されるようにする。
+            'symbol-sort-key': ['get', 'rank'],
+          },
+        });
+
+        this.map.on('click', 'volcano-symbol', (e) => {
+          const feature = e.features?.[0];
+          if (!feature) return;
+          this._showVolcanoPopup(feature.properties, e.lngLat);
+        });
+        this.map.on('mouseenter', 'volcano-symbol', () => {
+          this.map.getCanvas().style.cursor = 'pointer';
+        });
+        this.map.on('mouseleave', 'volcano-symbol', () => {
+          this.map.getCanvas().style.cursor = '';
+        });
+
+        this._volcanoLayerReady = true;
+      })();
+    }
+    return this._volcanoLayerPromise;
+  }
+
+  // itemsは useVolcanoFeed が組み立てた配列
+  // [{ code, name, lat, lon, iconId, alertLabel, reportDatetime, ... }, ...]
+  async setVolcanoMarkers(items) {
+    if (this._destroyed) return;
+    await this.ensureVolcanoLayer();
+    if (this._destroyed || !this.map) return;
+    // quake-stations-symbolや震源エリアのfill/lineは、地震の選択タイミング次第で
+    // このレイヤーより後から追加されることがある(=通常はそちらが上になる)。
+    // 火山アイコンは常に最前面に出したいので、更新のたびに最上段へ上げ直す。
+    if (this.map.getLayer('volcano-symbol')) this.map.moveLayer('volcano-symbol');
+    const fc = {
+      type: 'FeatureCollection',
+      features: (items || [])
+        .filter((v) => Number.isFinite(v.lat) && Number.isFinite(v.lon))
+        .map((v) => ({
+          type: 'Feature',
+          properties: {
+            code: v.code,
+            name: v.name,
+            iconId: v.iconId,
+            alertLabel: v.alertLabel || '',
+            reportDatetime: v.reportDatetime || '',
+            rank: Number.isFinite(v.rank) ? v.rank : 0,
+          },
+          geometry: { type: 'Point', coordinates: [v.lon, v.lat] },
+        })),
+    };
+    this.map.getSource('volcanoes')?.setData(fc);
+  }
+
+  // 一覧パネルで火山をタップした時: その位置へ寄って、詳細ポップアップを開く。
+  flyToVolcano(v) {
+    if (this._destroyed || !this.map || !v || !Number.isFinite(v.lat) || !Number.isFinite(v.lon)) return;
+    this.fitQuakeBounds([[v.lon, v.lat]]);
+    this._showVolcanoPopup(
+      { name: v.name, alertLabel: v.alertLabel || '', reportDatetime: v.reportDatetime || '' },
+      [v.lon, v.lat]
+    );
+  }
+
+  _showVolcanoPopup(props, lngLat) {
+    if (this._destroyed || !this.map) return;
+    this._volcanoPopup?.remove();
+    const name = escapeHtml(props?.name || '');
+    const alertLabel = escapeHtml(props?.alertLabel || '情報なし');
+    const time = props?.reportDatetime ? formatVolcanoPopupTime(props.reportDatetime) : '';
+    const html = `<div class="volcano-popup">` +
+      `<div class="volcano-popup-name">${name}</div>` +
+      `<div class="volcano-popup-state">${alertLabel}</div>` +
+      (time ? `<div class="volcano-popup-time">${escapeHtml(time)}</div>` : '') +
+      `</div>`;
+    this._volcanoPopup = new maplibregl.Popup({ closeButton: true, maxWidth: '220px', offset: 14 })
+      .setLngLat(lngLat)
+      .setHTML(html)
+      .addTo(this.map);
+  }
+
   _reportStats(filtered) {
     if (filtered.length === 0) {
       this.callbacks.onStats?.({ count: 0, maxMag: null, latest: null });
@@ -794,6 +926,7 @@ export class QuakeMapEngine {
     this._destroyed = true;
     const canvas = this.map?.getCanvas();
     if (canvas && this._onPointerMove) canvas.removeEventListener('pointermove', this._onPointerMove);
+    this._volcanoPopup?.remove();
     this._clearMeshes();
     this._disposeSelectedMarker();
     this.selectedHaloMaterial?.dispose();

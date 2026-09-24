@@ -3,12 +3,14 @@ import PressableButton from './PressableButton.jsx';
 import QuakePanel from './quake/QuakePanel.jsx';
 import QuakeSearchPanel from './quake/QuakeSearchPanel.jsx';
 import MapSettingsPanel from './MapSettingsPanel.jsx';
+import VolcanoPanel from './volcano/VolcanoPanel.jsx';
 import { useQuakeFeed } from '../lib/useQuakeFeed.js';
 import { useEqdbSearch } from '../lib/useEqdbSearch.js';
+import { useVolcanoFeed } from '../lib/useVolcanoFeed.js';
 
 // Slot 0 is the earthquake browser, slot 1 the eqdb search feature, slot 2
 // the map display settings moved down from the old standalone top-right
-// panel. Slot 3 (volcano info) is icon-only for now — no panel wired up yet.
+// panel, slot 3 the volcano alert browser.
 const ITEMS = [
   { id: 0, label: '地震' },
   { id: 1, label: '地震検索' },
@@ -90,11 +92,13 @@ const SEARCH_FORM_HEIGHT = TOPBAR_HEIGHT + 420; // 380 + room for 開始日/終�
 // stems toggle, refresh button) without its own inner scroll kicking in.
 const SETTINGS_HEIGHT = TOPBAR_HEIGHT + 360;
 
-// Placeholder slot (volcano info not built yet): small fixed footprint,
-// same shape the other slots used before they had real content.
-const PLACEHOLDER_HEIGHT = TOPBAR_HEIGHT + 104;
+// Volcano slot: same width again; list mode shows all 120 volcanoes
+// (scrollable) so it gets the tallest list footprint, detail mode is a
+// single card like the other two browsers.
+const VOLCANO_LIST_HEIGHT = TOPBAR_HEIGHT + 380;
+const VOLCANO_DETAIL_HEIGHT = TOPBAR_HEIGHT + 200;
 
-function openSizeFor(index, quakeFeed, eqdbSearch) {
+function openSizeFor(index, quakeFeed, eqdbSearch, volcanoFeed) {
   if (index === 0) {
     return {
       width: QUAKE_OPEN_WIDTH,
@@ -110,7 +114,10 @@ function openSizeFor(index, quakeFeed, eqdbSearch) {
   if (index === 2) {
     return { width: QUAKE_OPEN_WIDTH, height: SETTINGS_HEIGHT };
   }
-  return { width: QUAKE_OPEN_WIDTH, height: PLACEHOLDER_HEIGHT };
+  return {
+    width: QUAKE_OPEN_WIDTH,
+    height: volcanoFeed.selected ? VOLCANO_DETAIL_HEIGHT : VOLCANO_LIST_HEIGHT,
+  };
 }
 
 export default function IconDock({ engineRef, mapSettings }) {
@@ -120,11 +127,14 @@ export default function IconDock({ engineRef, mapSettings }) {
 
   // Kept mounted (and the WebSocket / map-sync effects live) for the dock's
   // whole lifetime, not just while a slot is open, so both are already
-  // current the moment the person opens them.
+  // current the moment the person opens them. volcanoFeed polls continuously
+  // regardless of open state, but only draws map markers while its own tab
+  // (index 3) is open — see its `visible` argument below.
   const quakeFeed = useQuakeFeed(engineRef);
   const eqdbSearch = useEqdbSearch(engineRef, quakeFeed.colorScheme);
+  const volcanoFeed = useVolcanoFeed(engineRef, open && active === 3);
 
-  const { width: openWidth, height: openHeight } = openSizeFor(active ?? 0, quakeFeed, eqdbSearch);
+  const { width: openWidth, height: openHeight } = openSizeFor(active ?? 0, quakeFeed, eqdbSearch, volcanoFeed);
 
   return (
     <div
@@ -155,12 +165,7 @@ export default function IconDock({ engineRef, mapSettings }) {
         {open && active === 0 && <QuakePanel feed={quakeFeed} />}
         {open && active === 1 && <QuakeSearchPanel feed={eqdbSearch} colorScheme={quakeFeed.colorScheme} />}
         {open && active === 2 && <MapSettingsPanel {...mapSettings} />}
-        {open && active === 3 && (
-          <>
-            <div className="icon-dock-content-title">火山情報</div>
-            <div className="icon-dock-content-body">まだ中身は未設定です。</div>
-          </>
-        )}
+        {open && active === 3 && <VolcanoPanel feed={volcanoFeed} />}
       </div>
     </div>
   );
