@@ -121,20 +121,29 @@ function openSizeFor(index, quakeFeed, eqdbSearch, volcanoFeed) {
 }
 
 export default function IconDock({ engineRef, mapSettings }) {
-  const [active, setActive] = useState(null);
-  const open = active != null;
-  const toggle = (i) => setActive((cur) => (cur === i ? null : i));
+  // activeTab is which tab is assigned to the dock; it's kept even after the
+  // panel is closed, so re-opening (or pressing the dock again) returns to
+  // the same tab until the person explicitly presses a different tab's
+  // button. open is a separate on/off for the flyout itself.
+  const [activeTab, setActiveTab] = useState(0);
+  const [open, setOpen] = useState(false);
+  const toggle = (i) => {
+    setOpen((wasOpen) => !(wasOpen && activeTab === i));
+    setActiveTab(i);
+  };
 
   // Kept mounted (and the WebSocket / map-sync effects live) for the dock's
   // whole lifetime, not just while a slot is open, so both are already
   // current the moment the person opens them. volcanoFeed polls continuously
-  // regardless of open state, but only draws map markers while its own tab
-  // (index 3) is open — see its `visible` argument below.
+  // regardless of open state, and draws map markers whenever tab 3 is the
+  // *assigned* tab (activeTab === 3) — independent of whether the flyout
+  // panel itself is currently expanded (`open`), so collapsing the dock
+  // doesn't hide the volcano markers as long as that tab is still selected.
   const quakeFeed = useQuakeFeed(engineRef);
   const eqdbSearch = useEqdbSearch(engineRef, quakeFeed.colorScheme);
-  const volcanoFeed = useVolcanoFeed(engineRef, open && active === 3);
+  const volcanoFeed = useVolcanoFeed(engineRef, activeTab === 3);
 
-  const { width: openWidth, height: openHeight } = openSizeFor(active ?? 0, quakeFeed, eqdbSearch, volcanoFeed);
+  const { width: openWidth, height: openHeight } = openSizeFor(activeTab, quakeFeed, eqdbSearch, volcanoFeed);
 
   return (
     <div
@@ -151,7 +160,7 @@ export default function IconDock({ engineRef, mapSettings }) {
         return (
           <div key={item.id} className="icon-dock-slot" style={{ transform: `translate(${x}px, ${y}px)` }}>
             <PressableButton
-              className={`icon-dock-btn ${active === i ? 'active' : ''}`}
+              className={`icon-dock-btn ${activeTab === i ? 'active' : ''}`}
               onClick={() => toggle(i)}
               aria-label={item.label}
             >
@@ -162,10 +171,10 @@ export default function IconDock({ engineRef, mapSettings }) {
       })}
 
       <div className="icon-dock-content" style={{ opacity: open ? 1 : 0, pointerEvents: open ? 'auto' : 'none' }}>
-        {open && active === 0 && <QuakePanel feed={quakeFeed} />}
-        {open && active === 1 && <QuakeSearchPanel feed={eqdbSearch} colorScheme={quakeFeed.colorScheme} />}
-        {open && active === 2 && <MapSettingsPanel {...mapSettings} />}
-        {open && active === 3 && <VolcanoPanel feed={volcanoFeed} />}
+        {open && activeTab === 0 && <QuakePanel feed={quakeFeed} />}
+        {open && activeTab === 1 && <QuakeSearchPanel feed={eqdbSearch} colorScheme={quakeFeed.colorScheme} />}
+        {open && activeTab === 2 && <MapSettingsPanel {...mapSettings} />}
+        {open && activeTab === 3 && <VolcanoPanel feed={volcanoFeed} />}
       </div>
     </div>
   );

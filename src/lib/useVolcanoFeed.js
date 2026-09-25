@@ -34,11 +34,13 @@ function buildVolcanoList(volcanoList, alertsByCode) {
 
 /**
  * engineRef: MapView側のQuakeMapEngineインスタンスへのref。
- * visible: 火山情報タブが開いているかどうか。
+ * visible: 火山情報タブが「割り当てられている」かどうか(activeTab===3)。
+ *          フローティングパネル自体の開閉(open)とは独立していて、閉じても
+ *          このタブが割り当てられたままなら地図上のマーカーは消さない。
+ *          別のタブが選ばれた時だけマーカーを消す。
  *
  * データ取得はタブの開閉に関係なく、マウント時から10分間隔で継続する
- * （タブを開くたびに取得し直すことはしない）。一方、地図上へのマーカー
- * 表示はvisibleがtrueの間だけ行い、閉じたら消す。
+ * （タブを開くたびに取得し直すことはしない）。
  */
 export function useVolcanoFeed(engineRef, visible) {
   const [items, setItems] = useState([]);
