@@ -12,8 +12,10 @@ const initialRange = defaultEqdbDateRange();
  * engineRef: shared QuakeMapEngine ref (same one useQuakeFeed uses).
  * colorScheme: shared with the recent-list feed, so a selected search
  * result paints in the same palette the person already picked.
+ * active: whether this panel's own dock tab (検索) is the currently
+ * assigned tab — same gating useQuakeFeed does for its own tab.
  */
-export function useEqdbSearch(engineRef, colorScheme) {
+export function useEqdbSearch(engineRef, colorScheme, active) {
   const [form, setForm] = useState({
     startDate: initialRange.start,
     endDate: initialRange.end,
@@ -135,12 +137,17 @@ export function useEqdbSearch(engineRef, colorScheme) {
   useEffect(() => {
     const engine = engineRef?.current;
     if (!engine) return;
+    if (!active) {
+      engine.clearQuakeIntensity?.();
+      engine.setSelectedQuakeHypocenter?.(null);
+      return undefined;
+    }
     const cancelToken = { cancelled: false };
     syncQuakeToMap(engine, selected, colorScheme, fitKeyRef, cancelToken).catch((err) => {
       console.error('震度分布の描画に失敗しました:', err);
     });
     return () => { cancelToken.cancelled = true; };
-  }, [selected, colorScheme, engineRef]);
+  }, [selected, colorScheme, engineRef, active]);
 
   return {
     form, patch, minStartDate, maxEndDate, epicenterOptions,

@@ -22,8 +22,12 @@ function mergeIncoming(list, card) {
 /**
  * engineRef: a ref to the QuakeMapEngine instance (from MapView's engineRef),
  * so selecting a quake can paint its felt-area distribution on the map.
+ * active: whether this panel's own dock tab (地震一覧) is the currently
+ * assigned tab. The felt-area overlay + hypocenter marker are only drawn
+ * while true — switching to another tab hides them (selection itself is
+ * kept, so switching back restores the same view without re-fetching).
  */
-export function useQuakeFeed(engineRef) {
+export function useQuakeFeed(engineRef, active) {
   const [quakes, setQuakes] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -89,12 +93,19 @@ export function useQuakeFeed(engineRef) {
   useEffect(() => {
     const engine = engineRef?.current;
     if (!engine) return;
+    if (!active) {
+      // 他のタブに切り替わっている間は観測点・震度分布を地図から消す
+      // (選択状態自体はここでは変えないので、戻ってくれば再取得なしで復元する)。
+      engine.clearQuakeIntensity?.();
+      engine.setSelectedQuakeHypocenter?.(null);
+      return undefined;
+    }
     const cancelToken = { cancelled: false };
     syncQuakeToMap(engine, selected, colorScheme, fitKeyRef, cancelToken).catch((err) => {
       console.error('震度分布の描画に失敗しました:', err);
     });
     return () => { cancelToken.cancelled = true; };
-  }, [selected, colorScheme, engineRef]);
+  }, [selected, colorScheme, engineRef, active]);
 
   // Clear the map overlay + hypocenter marker on unmount (panel closed for
   // good / app teardown).

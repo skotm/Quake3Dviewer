@@ -139,8 +139,8 @@ export default function IconDock({ engineRef, mapSettings }) {
   // *assigned* tab (activeTab === 3) — independent of whether the flyout
   // panel itself is currently expanded (`open`), so collapsing the dock
   // doesn't hide the volcano markers as long as that tab is still selected.
-  const quakeFeed = useQuakeFeed(engineRef);
-  const eqdbSearch = useEqdbSearch(engineRef, quakeFeed.colorScheme);
+  const quakeFeed = useQuakeFeed(engineRef, activeTab === 0);
+  const eqdbSearch = useEqdbSearch(engineRef, quakeFeed.colorScheme, activeTab === 1);
   const volcanoFeed = useVolcanoFeed(engineRef, activeTab === 3);
 
   const { width: openWidth, height: openHeight } = openSizeFor(activeTab, quakeFeed, eqdbSearch, volcanoFeed);
